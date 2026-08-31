@@ -1,0 +1,118 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Công ty đã lưu — Company Scanner</title>
+  <link rel="icon" type="image/png" sizes="32x32" href="/static/favicon-32.png">
+  <link rel="icon" href="/static/favicon.ico" sizes="any">
+  <link rel="apple-touch-icon" href="/static/favicon-180.png">
+  <link rel="stylesheet" href="/static/tailwind.css">
+  <link rel="stylesheet" href="/static/app.css">
+</head>
+<body>
+  <div class="min-h-screen bg-[#fcfcfd] text-slate-900 font-[system-ui,sans-serif] selection:bg-blue-100">
+
+    <header class="sticky top-0 z-30 backdrop-blur-xl bg-white/80 border-b border-slate-200/70">
+      <div class="mx-auto max-w-[1120px] px-5 md:px-6 h-[64px] flex items-center justify-between">
+        <div class="flex items-center gap-3">
+          <a href="/" class="brand-logo-link" aria-label="HBLAB">
+            <img class="brand-logo" src="/static/logo-hblab.png" alt="HBLAB">
+          </a>
+          <div class="leading-tight">
+            <div class="flex items-baseline gap-2">
+              <span class="font-semibold text-[15px] tracking-tight">Company Scanner</span>
+              <span class="hidden md:inline text-[11px] font-medium px-2 py-0.5 rounded-full bg-blue-50 text-blue-700 border border-blue-100">Live</span>
+            </div>
+            <div class="text-[12.5px] text-slate-500 -mt-0.5 hidden md:block">Quét thông tin doanh nghiệp cho IT Outsourcing</div>
+          </div>
+        </div>
+
+        <nav class="tabbar">
+          <a href="/" class="tab">
+            <span data-icon="search" data-size="15"></span><span class="tab-label">Quét mới</span>
+          </a>
+          <a href="/saved" class="tab tab-active">
+            <span data-icon="database" data-size="15"></span><span class="tab-label">Công ty đã lưu</span>
+            <span class="tab-badge" id="nav-saved-count">0</span>
+          </a>
+        </nav>
+      </div>
+    </header>
+
+    <main class="mx-auto max-w-[1120px] px-5 md:px-6 py-8 md:py-12">
+      <div class="mb-7">
+        <h1 class="text-[24px] md:text-[30px] font-[700] tracking-tight leading-[1.15] text-slate-900">
+          Công ty đã lưu
+        </h1>
+        <p class="mt-2 text-[13.5px] text-slate-500 leading-relaxed">
+          Toàn bộ công ty đã quét và lưu vào database. Bấm <strong class="font-semibold text-slate-700">Xem</strong>
+          để mở lại kết quả đầy đủ mà không phải quét lại.
+        </p>
+      </div>
+
+      <div class="rounded-[20px] border border-slate-200 bg-white p-5 md:p-6 shadow-sm">
+        <div class="flex flex-wrap items-center justify-between gap-3 mb-5">
+          <div class="flex items-center gap-3">
+            <div class="h-9 w-9 rounded-xl bg-slate-900 text-white flex items-center justify-center" data-icon="database" data-size="18"></div>
+            <div>
+              <h3 class="text-[15px] font-semibold leading-none">Danh sách</h3>
+              <p class="text-[12px] text-slate-500 mt-1.5" id="saved-count">Đang tải...</p>
+            </div>
+          </div>
+          <div class="flex items-center gap-2">
+            <div class="saved-search">
+              <span class="saved-search-icon" data-icon="search" data-size="14"></span>
+              <input id="saved-filter" type="text" class="saved-search-input" autocomplete="off"
+                placeholder="Tìm theo tên, email, lĩnh vực, website...">
+            </div>
+            <button id="saved-refresh" class="h-9 px-3.5 rounded-full border border-slate-200 bg-white hover:bg-slate-50 text-[13px] font-medium">Làm mới</button>
+            <div class="relative">
+              <button id="export-btn" class="h-9 px-4 rounded-full bg-blue-600 hover:bg-blue-700 text-white text-[13px] font-semibold flex items-center gap-1.5 shadow-sm">
+                <span data-icon="sheet" data-size="16"></span> Xuất <span data-icon="chevron" data-size="14"></span>
+              </button>
+              <div id="export-menu" class="hidden absolute right-0 mt-2 w-[230px] rounded-xl border border-slate-200 bg-white shadow-xl p-1 z-20">
+                <button id="export-csv" class="w-full text-left px-3 py-2.5 rounded-lg hover:bg-slate-50 text-[13px] font-medium flex items-center gap-2">
+                  <span data-icon="sheet" data-size="16"></span> Xuất Excel (.csv)
+                </button>
+                <button id="export-json" class="w-full text-left px-3 py-2.5 rounded-lg hover:bg-slate-50 text-[13px] font-medium flex items-center gap-2">
+                  <span data-icon="json" data-size="16"></span> Xuất JSON đầy đủ (.json)
+                </button>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <div class="saved-wrap">
+          <table class="saved-table">
+            <thead>
+              <tr>
+                <th>Tên công ty</th>
+                <th>Địa chỉ</th>
+                <th>Số điện thoại</th>
+                <th>Email</th>
+                <th>Lĩnh vực</th>
+                <th>Website</th>
+                <th>IT Hiring</th>
+                <th>Cập nhật</th>
+                <th></th>
+              </tr>
+            </thead>
+            <tbody id="saved-rows"></tbody>
+          </table>
+        </div>
+
+        <div id="saved-empty" class="hidden saved-empty">
+          Chưa có công ty nào. Sang trang "Quét mới", quét một website rồi bấm "Lưu vào database".
+        </div>
+      </div>
+
+      <div class="mt-14 text-center text-[11px] text-slate-400">
+        Company Scanner • Lead generation cho IT Outsourcing • Dữ liệu chỉ lấy từ website bạn nhập — không có dữ liệu = Not found
+      </div>
+    </main>
+  </div>
+
+  <script src="/static/app.js"></script>
+</body>
+</html>

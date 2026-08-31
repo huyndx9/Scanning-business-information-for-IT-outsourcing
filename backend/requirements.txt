@@ -1,0 +1,10 @@
+fastapi>=0.110
+uvicorn[standard]>=0.27
+httpx>=0.27
+beautifulsoup4>=4.12
+lxml>=5.1
+pydantic>=2.6
+
+# Optional - only used when a page's HTML is an empty JavaScript shell.
+# After installing, run once:  python -m playwright install chromium
+playwright>=1.40

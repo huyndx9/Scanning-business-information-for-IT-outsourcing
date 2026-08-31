@@ -1,0 +1,284 @@
+/* Supplement to the prototype's compiled Tailwind build (tailwind.css).
+   Only the handful of utilities the original UI never used: the IT-hiring
+   signal colours, the error card, and a few layout helpers. */
+
+.grid-cols-2 { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+.break-all { word-break: break-all; }
+.underline { text-decoration-line: underline; }
+.cursor-pointer { cursor: pointer; }
+.list-none { list-style: none; }
+.max-h-\[240px\] { max-height: 240px; }
+.overflow-y-auto { overflow-y: auto; }
+.italic { font-style: italic; }
+
+/* amber — Medium signal */
+.bg-amber-50 { background-color: #fffbeb; }
+.border-amber-200 { border-color: #fde68a; }
+.text-amber-700 { color: #b45309; }
+.bg-amber-600 { background-color: #d97706; }
+
+/* rose — errors */
+.bg-rose-50 { background-color: #fff1f2; }
+.border-rose-200 { border-color: #fecdd3; }
+.text-rose-700 { color: #be123c; }
+.bg-rose-600 { background-color: #e11d48; }
+
+/* slate extras used by the "Not found" state */
+.text-slate-300 { color: #cbd5e1; }
+.bg-slate-200 { background-color: #e2e8f0; }
+.text-slate-700 { color: #334155; }
+
+@media (min-width: 768px) {
+  .md\:grid-cols-4 { grid-template-columns: repeat(4, minmax(0, 1fr)); }
+}
+
+/* --- Bang cong ty da luu -------------------------------------------------- */
+
+.saved-wrap { overflow-x: auto; }
+
+.saved-table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 13px;
+  white-space: nowrap;
+}
+
+.saved-table th {
+  text-align: left;
+  font-size: 11px;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.03em;
+  color: #64748b;
+  padding: 0 12px 8px;
+  border-bottom: 1px solid #e2e8f0;
+}
+
+.saved-table td {
+  padding: 11px 12px;
+  border-bottom: 1px solid #f1f5f9;
+  vertical-align: middle;
+  color: #0f172a;
+}
+
+.saved-table tbody tr:hover { background: #f8fafc; }
+.saved-table tbody tr:last-child td { border-bottom: none; }
+
+.saved-name { font-weight: 600; }
+
+/* Dia chi / linh vuc / website thuong dai; cat bot de bang khong tran ngang.
+   Do rong dat rieng tung cot de ca bang vua khung 1120px. */
+.saved-truncate {
+  display: block;
+  max-width: 240px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.saved-table td:nth-child(2) .saved-truncate { max-width: 145px; }   /* dia chi */
+.saved-table td:nth-child(4) .saved-truncate { max-width: 165px; }   /* email */
+.saved-table td:nth-child(5) .saved-truncate { max-width: 115px; }   /* linh vuc */
+.saved-table td:nth-child(6) .saved-truncate { max-width: 125px; }   /* website */
+.saved-table td:first-child { max-width: 175px; overflow: hidden; text-overflow: ellipsis; }
+.saved-table th, .saved-table td { padding-left: 9px; padding-right: 9px; }
+.saved-date { color: #64748b; font-size: 12px; }
+
+/* Cot nut dinh ben phai: du du lieu dai den dau, "Xem"/"Xoa" van luon thay. */
+.saved-table th:last-child,
+.saved-table td:last-child {
+  position: sticky;
+  right: 0;
+  background: #fff;
+  box-shadow: -8px 0 8px -8px rgba(15, 23, 42, .15);
+}
+.saved-table tbody tr:hover td:last-child { background: #f8fafc; }
+
+.saved-muted { color: #94a3b8; font-style: italic; }
+
+.saved-actions { display: flex; gap: 6px; justify-content: flex-end; }
+
+.saved-btn {
+  height: 28px;
+  padding: 0 10px;
+  border-radius: 999px;
+  border: 1px solid #e2e8f0;
+  background: #fff;
+  font-size: 12px;
+  font-weight: 500;
+  cursor: pointer;
+  color: #0f172a;
+}
+.saved-btn:hover { background: #f1f5f9; }
+.saved-btn-danger:hover { background: #fff1f2; border-color: #fecdd3; color: #be123c; }
+
+.saved-pill {
+  display: inline-flex;
+  align-items: center;
+  height: 22px;
+  padding: 0 9px;
+  border-radius: 999px;
+  border: 1px solid;
+  font-size: 11px;
+  font-weight: 600;
+}
+.saved-pill-high { background: #ecfdf5; border-color: #a7f3d0; color: #047857; }
+.saved-pill-medium { background: #fffbeb; border-color: #fde68a; color: #b45309; }
+.saved-pill-low { background: #eff6ff; border-color: #dbeafe; color: #1d4ed8; }
+.saved-pill-none { background: #f1f5f9; border-color: #e2e8f0; color: #64748b; }
+
+.saved-empty { padding: 16px 12px; color: #94a3b8; font-style: italic; font-size: 13px; }
+
+/* --- Tab bar -------------------------------------------------------------- */
+
+/* Dieu huong nam trong header, goc phai. */
+.tabbar {
+  display: inline-flex;
+  gap: 4px;
+  padding: 4px;
+  border-radius: 999px;
+  background: #f1f5f9;
+  border: 1px solid #e2e8f0;
+}
+
+.tab {
+  display: inline-flex;
+  align-items: center;
+  gap: 7px;
+  height: 32px;
+  padding: 0 14px;
+  border: none;
+  border-radius: 999px;
+  background: transparent;
+  color: #475569;
+  font-size: 13px;
+  font-weight: 600;
+  text-decoration: none;
+  white-space: nowrap;
+  cursor: pointer;
+  transition: background-color .15s, color .15s, box-shadow .15s;
+}
+.tab:hover { color: #0f172a; }
+
+@media (max-width: 560px) {
+  .tab-label { display: none; }
+  .tab { padding: 0 10px; }
+}
+
+.tab-active {
+  background: #fff;
+  color: #0f172a;
+  box-shadow: 0 1px 2px rgba(15, 23, 42, .08);
+}
+
+.tab-badge {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-width: 20px;
+  height: 20px;
+  padding: 0 6px;
+  border-radius: 999px;
+  background: #e2e8f0;
+  color: #475569;
+  font-size: 11px;
+  font-weight: 700;
+}
+.tab-active .tab-badge { background: #0f172a; color: #fff; }
+
+/* --- O tim kiem trong tab "Cong ty da luu" -------------------------------
+   Prototype khong build cac utility nay (pl-9, w-[260px], left-3, pr-3,
+   text-[13px]) nen dinh nghia truc tiep cho o tim kiem. */
+
+.saved-search { position: relative; }
+
+.saved-search-icon {
+  position: absolute;
+  left: 12px;
+  top: 50%;
+  transform: translateY(-50%);
+  color: #94a3b8;
+  pointer-events: none;
+  display: flex;
+}
+
+.saved-search-input {
+  height: 36px;
+  width: 260px;
+  max-width: 100%;
+  padding: 0 12px 0 34px;
+  border: 1px solid #e2e8f0;
+  border-radius: 999px;
+  background: #f8fafc;
+  font-size: 13px;
+  font-weight: 500;
+  color: #0f172a;
+  outline: none;
+  transition: background-color .15s, border-color .15s;
+}
+.saved-search-input::placeholder { color: #94a3b8; font-weight: 400; }
+.saved-search-input:focus { background: #fff; border-color: #3b82f6; }
+
+@media (max-width: 640px) {
+  .saved-search-input { width: 100%; }
+}
+
+/* --- Tien trinh quet ------------------------------------------------------
+   Thong tin phu: chip nho, xep tran dong thay vi luoi 3 cot cao 44px. */
+
+.stage-list {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 5px;
+  margin-top: 12px;
+}
+.stage-list.hidden { display: none; }
+
+.stage {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  height: 24px;
+  padding: 0 9px 0 6px;
+  border-radius: 999px;
+  border: 1px solid;
+  font-size: 11px;
+  font-weight: 500;
+  line-height: 1;
+  transition: background-color .15s, border-color .15s, color .15s;
+}
+
+.stage-idle   { background: #f8fafc; border-color: #e2e8f0; color: #94a3b8; }
+.stage-active { background: #eff6ff; border-color: #bfdbfe; color: #1d4ed8; }
+.stage-done   { background: #f0fdf4; border-color: #dcfce7; color: #16a34a; }
+
+.stage-dot {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 14px;
+  height: 14px;
+  border-radius: 999px;
+  border: 1px solid;
+  font-size: 9px;
+  font-weight: 600;
+  flex-shrink: 0;
+}
+.stage-idle   .stage-dot { background: #fff; border-color: #e2e8f0; color: #94a3b8; }
+.stage-active .stage-dot { background: #2563eb; border-color: #2563eb; color: #fff; }
+.stage-done   .stage-dot { background: #16a34a; border-color: #16a34a; color: #fff; }
+
+/* --- Logo HBL o header ----------------------------------------------------
+   File nam o frontend/hbl-logo.svg (hoac .png). Thay file la doi logo,
+   khong phai sua code. */
+
+.brand-logo-link { display: flex; align-items: center; flex-shrink: 0; }
+
+.brand-logo {
+  height: 40px;   /* logo co ca tagline nen can cao hon mot chut */
+  width: auto;
+  display: block;
+}
+
+@media (max-width: 560px) {
+  .brand-logo { height: 30px; }
+}
