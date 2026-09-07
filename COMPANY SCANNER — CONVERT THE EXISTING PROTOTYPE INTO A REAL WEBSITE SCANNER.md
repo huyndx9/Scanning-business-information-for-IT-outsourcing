@@ -530,7 +530,7 @@ Không cần điểm 0–100.
 
 Không cần AI scoring.
 
-Không cần HBLAB Fit Score.
+Không cần Fit Score.
 
 ---
 

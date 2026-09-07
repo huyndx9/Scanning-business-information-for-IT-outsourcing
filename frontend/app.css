@@ -267,18 +267,18 @@
 .stage-active .stage-dot { background: #2563eb; border-color: #2563eb; color: #fff; }
 .stage-done   .stage-dot { background: #16a34a; border-color: #16a34a; color: #fff; }
 
-/* --- Logo HBL o header ----------------------------------------------------
-   File nam o frontend/hbl-logo.svg (hoac .png). Thay file la doi logo,
+/* --- Logo o header --------------------------------------------------------
+   Anh nam o frontend/ va duoc mount qua /static. Thay file la doi logo,
    khong phai sua code. */
 
 .brand-logo-link { display: flex; align-items: center; flex-shrink: 0; }
 
 .brand-logo {
-  height: 40px;   /* logo co ca tagline nen can cao hon mot chut */
+  height: 32px;   /* mark vuong, khong co tagline nen thap hon logo cu */
   width: auto;
   display: block;
 }
 
 @media (max-width: 560px) {
-  .brand-logo { height: 30px; }
+  .brand-logo { height: 26px; }
 }
