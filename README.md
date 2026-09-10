@@ -1,3 +1,5 @@
+> [🇰🇷 한국어](README.ko.md) | 🇻🇳 Tiếng Việt
+
 # Company Scanner
 
 Quét thông tin doanh nghiệp từ website thật, phục vụ sales IT Outsourcing.
@@ -5,6 +7,21 @@ Quét thông tin doanh nghiệp từ website thật, phục vụ sales IT Outsou
 Nhập URL → app truy cập website thật, crawl các trang liên quan (giới thiệu, liên hệ,
 ban lãnh đạo, tuyển dụng) và trích xuất thông tin có ích cho sales. Không có mock data:
 mỗi URL là một lần scan độc lập, không tìm thấy thì trả `Not found`.
+
+## Ngôn ngữ
+
+Giao diện mặc định là **tiếng Hàn**. Nút ở góc phải header đổi qua lại 한국어 ↔ Tiếng Việt
+ngay lập tức, và lựa chọn được lưu trong trình duyệt cho lần mở sau. Mọi chữ hiển thị
+lấy từ từ điển trong `frontend/i18n.js`.
+
+Kiểm tra bản dịch có thiếu chỗ nào không:
+
+```bash
+python backend/check_i18n.py
+```
+
+Script đối chiếu hai từ điển (ko/vi), kiểm tra mọi khoá code dùng đều tồn tại, và soát
+xem HTML/JS còn chuỗi nào viết thẳng chưa qua i18n.
 
 ## Chạy app
 
@@ -80,11 +97,13 @@ backend/app/main.py        FastAPI: /api/scan, /api/scan/stream (SSE), /api/comp
 start.py                   Launcher: kiểm tra môi trường, chọn port, mở trình duyệt
 backend/scan_cli.py        Quét từ terminal
 backend/test_scanner.py    Test offline
+backend/check_i18n.py      Kiểm tra bản dịch
 frontend/index.html        Trang "Quét mới" (giữ nguyên layout của prototype)
 frontend/saved.html        Trang "Công ty đã lưu"
+frontend/i18n.js           Từ điển tiếng Hàn/tiếng Việt, chuyển ngôn ngữ
 frontend/app.js            Dùng chung 2 trang: gọi API, render kết quả, export, danh sách
 frontend/tailwind.css      CSS compiled lấy nguyên từ prototype
-frontend/app.css           Vài class bổ sung prototype chưa build (màu IT Hiring, lỗi)
+frontend/app.css           Vài class bổ sung prototype chưa build (màu IT Hiring, lỗi, nút ngôn ngữ)
 ```
 
 `Company-Scanner-Prototype-Ui (1).html` được giữ nguyên làm UI reference, app không dùng file này.
@@ -163,8 +182,12 @@ Kết quả:
 }
 ```
 
-Field nào không tìm được sẽ là `null` và UI hiển thị `Not found`.
+Field nào không tìm được sẽ là `null`; UI hiển thị `찾을 수 없음` (tiếng Hàn) hoặc
+`Not found` (tiếng Việt).
 `company_sources` là URL bằng chứng cho từng field (yêu cầu source validation).
+
+Giá trị `sales_signal.it_hiring` giữ nguyên `High / Medium / Low / None` trong API và
+JSON; trên giao diện và trong CSV thì hiển thị theo ngôn ngữ (`높음 / 보통 / 낮음 / 없음`).
 
 Các endpoint của database:
 

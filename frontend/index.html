@@ -1,9 +1,9 @@
 <!DOCTYPE html>
-<html lang="vi">
+<html lang="ko">
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
-  <title>Company Scanner</title>
+  <title data-i18n-title="scan.title">Company Scanner</title>
   <link rel="icon" type="image/png" sizes="32x32" href="/static/favicon-32.png">
   <link rel="icon" href="/static/favicon.ico" sizes="any">
   <link rel="apple-touch-icon" href="/static/favicon-180.png">
@@ -24,44 +24,48 @@
               <span class="font-semibold text-[15px] tracking-tight">Company Scanner</span>
               <span class="hidden md:inline text-[11px] font-medium px-2 py-0.5 rounded-full bg-blue-50 text-blue-700 border border-blue-100">Live</span>
             </div>
-            <div class="text-[12.5px] text-slate-500 -mt-0.5 hidden md:block">Quét thông tin doanh nghiệp cho IT Outsourcing</div>
+            <div class="text-[12.5px] text-slate-500 -mt-0.5 hidden md:block" data-i18n="brand.subtitle"></div>
           </div>
         </div>
 
-        <nav class="tabbar">
-          <a href="/" class="tab tab-active">
-            <span data-icon="search" data-size="15"></span><span class="tab-label">Quét mới</span>
-          </a>
-          <a href="/saved" class="tab">
-            <span data-icon="database" data-size="15"></span><span class="tab-label">Công ty đã lưu</span>
-            <span class="tab-badge" id="nav-saved-count">0</span>
-          </a>
-        </nav>
+        <div class="flex items-center gap-2">
+          <nav class="tabbar">
+            <a href="/" class="tab tab-active">
+              <span data-icon="search" data-size="15"></span><span class="tab-label" data-i18n="nav.scan"></span>
+            </a>
+            <a href="/saved" class="tab">
+              <span data-icon="database" data-size="15"></span><span class="tab-label" data-i18n="nav.saved"></span>
+              <span class="tab-badge" id="nav-saved-count">0</span>
+            </a>
+          </nav>
+
+          <div class="langbar">
+            <button type="button" class="lang-btn" data-lang-btn="ko" data-i18n="lang.ko"></button>
+            <button type="button" class="lang-btn" data-lang-btn="vi" data-i18n="lang.vi"></button>
+          </div>
+        </div>
       </div>
     </header>
 
     <main class="mx-auto max-w-[1120px] px-5 md:px-6 py-8 md:py-12">
       <div class="mx-auto max-w-[760px]">
         <div class="text-center mb-7 md:mb-8">
-          <h1 class="text-[28px] md:text-[36px] font-[700] tracking-tight leading-[1.1] text-slate-900">
-            Korean IT Company Scanner
-          </h1>
-          <p class="mt-3 text-[14px] md:text-[15px] text-slate-500 leading-relaxed max-w-[560px] mx-auto">
-            Nhập website công ty, hệ thống sẽ truy cập trang chủ, tìm trang giới thiệu, liên hệ
-            và tuyển dụng để trích xuất tên, địa chỉ, SĐT, lãnh đạo IT và tin tuyển dụng IT.
-          </p>
+          <h1 class="text-[28px] md:text-[36px] font-[700] tracking-tight leading-[1.1] text-slate-900"
+              data-i18n="scan.heading"></h1>
+          <p class="mt-3 text-[14px] md:text-[15px] text-slate-500 leading-relaxed max-w-[560px] mx-auto"
+             data-i18n="scan.description"></p>
         </div>
 
         <div class="rounded-[20px] border border-slate-200 bg-white shadow-[0_20px_60px_-30px_rgba(15,23,42,0.2),0_0_0_1px_rgba(255,255,255,0.6)_inset] p-4 md:p-5">
           <div class="flex flex-col md:flex-row gap-3">
             <div class="flex-1 relative">
               <span class="absolute left-3.5 top-1/2 -translate-y-1/2 text-slate-400" data-icon="search" data-size="18"></span>
-              <input id="url-input" type="text" placeholder="Hãy nhập địa chỉ web" autocomplete="off"
+              <input id="url-input" type="text" autocomplete="off" data-i18n-placeholder="scan.placeholder"
                 class="w-full h-[48px] rounded-[12px] border border-slate-200 bg-slate-50/70 pl-11 pr-4 text-[14.5px] font-medium placeholder:text-slate-400 outline-none focus:bg-white focus:border-blue-500 focus:ring-4 focus:ring-blue-500/10 transition-all">
             </div>
             <button id="scan-btn"
               class="h-[48px] md:w-[148px] rounded-[12px] bg-[#0f172a] hover:bg-black text-white text-[14px] font-semibold flex items-center justify-center gap-2 disabled:opacity-50 disabled:cursor-not-allowed transition-colors shadow-[0_8px_20px_-10px_rgba(15,23,42,0.6)]">
-              <span data-icon="sparkles" data-size="16"></span><span id="scan-btn-label">Quét ngay</span>
+              <span data-icon="sparkles" data-size="16"></span><span id="scan-btn-label"></span>
             </button>
           </div>
 
@@ -69,7 +73,7 @@
 
           <div class="mt-3 flex items-center gap-2 text-[11px] text-slate-400">
             <span data-icon="shield" data-size="12"></span>
-            <span>Crawler thật, chỉ dữ liệu công khai — tối đa 20 trang · độ sâu 2 · timeout 15s, chỉ quét đúng domain bạn nhập.</span>
+            <span data-i18n="scan.limits"></span>
           </div>
         </div>
       </div>
@@ -77,7 +81,7 @@
       <div id="error-box" class="hidden mt-8 mx-auto max-w-[760px] rounded-[16px] border border-rose-200 bg-rose-50 p-4 flex items-start gap-3">
         <div class="h-8 w-8 rounded-full bg-rose-600 text-white flex items-center justify-center shrink-0" data-icon="alert" data-size="16"></div>
         <div>
-          <div class="text-[14px] font-semibold text-rose-700" id="error-title">Scan failed.</div>
+          <div class="text-[14px] font-semibold text-rose-700" id="error-title"></div>
           <div class="text-[12.5px] text-rose-700 mt-1" id="error-detail"></div>
         </div>
       </div>
@@ -88,32 +92,31 @@
         <div class="rounded-xl border border-dashed border-slate-200 bg-white/60 p-4 flex gap-3">
           <div class="h-9 w-9 rounded-lg bg-slate-900 text-white flex items-center justify-center shrink-0" data-icon="building" data-size="16"></div>
           <div>
-            <div class="text-[13px] font-semibold">Thông tin công ty</div>
-            <div class="text-[12px] text-slate-500 mt-0.5">Tên, địa chỉ, SĐT, lĩnh vực</div>
+            <div class="text-[13px] font-semibold" data-i18n="scan.card.company"></div>
+            <div class="text-[12px] text-slate-500 mt-0.5" data-i18n="scan.card.companyDesc"></div>
           </div>
         </div>
         <div class="rounded-xl border border-dashed border-slate-200 bg-white/60 p-4 flex gap-3">
           <div class="h-9 w-9 rounded-lg bg-slate-900 text-white flex items-center justify-center shrink-0" data-icon="users" data-size="16"></div>
           <div>
-            <div class="text-[13px] font-semibold">Key contacts</div>
-            <div class="text-[12px] text-slate-500 mt-0.5">CTO, CIO, CEO — tối đa 3</div>
+            <div class="text-[13px] font-semibold" data-i18n="scan.card.contacts"></div>
+            <div class="text-[12px] text-slate-500 mt-0.5" data-i18n="scan.card.contactsDesc"></div>
           </div>
         </div>
         <div class="rounded-xl border border-dashed border-slate-200 bg-white/60 p-4 flex gap-3">
           <div class="h-9 w-9 rounded-lg bg-slate-900 text-white flex items-center justify-center shrink-0" data-icon="briefcase" data-size="16"></div>
           <div>
-            <div class="text-[13px] font-semibold">Tuyển dụng IT</div>
-            <div class="text-[12px] text-slate-500 mt-0.5">Tối đa 10 vị trí + link nguồn</div>
+            <div class="text-[13px] font-semibold" data-i18n="scan.card.jobs"></div>
+            <div class="text-[12px] text-slate-500 mt-0.5" data-i18n="scan.card.jobsDesc"></div>
           </div>
         </div>
       </div>
 
-      <div class="mt-14 text-center text-[11px] text-slate-400">
-        Company Scanner • Lead generation cho IT Outsourcing • Dữ liệu chỉ lấy từ website bạn nhập — không có dữ liệu = Not found
-      </div>
+      <div class="mt-14 text-center text-[11px] text-slate-400" data-i18n="footer.note"></div>
     </main>
   </div>
 
+  <script src="/static/i18n.js"></script>
   <script src="/static/app.js"></script>
 </body>
 </html>

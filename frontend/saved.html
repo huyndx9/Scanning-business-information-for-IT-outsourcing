@@ -1,9 +1,9 @@
 <!DOCTYPE html>
-<html lang="vi">
+<html lang="ko">
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
-  <title>Công ty đã lưu — Company Scanner</title>
+  <title data-i18n-title="saved.title">Company Scanner</title>
   <link rel="icon" type="image/png" sizes="32x32" href="/static/favicon-32.png">
   <link rel="icon" href="/static/favicon.ico" sizes="any">
   <link rel="apple-touch-icon" href="/static/favicon-180.png">
@@ -24,31 +24,34 @@
               <span class="font-semibold text-[15px] tracking-tight">Company Scanner</span>
               <span class="hidden md:inline text-[11px] font-medium px-2 py-0.5 rounded-full bg-blue-50 text-blue-700 border border-blue-100">Live</span>
             </div>
-            <div class="text-[12.5px] text-slate-500 -mt-0.5 hidden md:block">Quét thông tin doanh nghiệp cho IT Outsourcing</div>
+            <div class="text-[12.5px] text-slate-500 -mt-0.5 hidden md:block" data-i18n="brand.subtitle"></div>
           </div>
         </div>
 
-        <nav class="tabbar">
-          <a href="/" class="tab">
-            <span data-icon="search" data-size="15"></span><span class="tab-label">Quét mới</span>
-          </a>
-          <a href="/saved" class="tab tab-active">
-            <span data-icon="database" data-size="15"></span><span class="tab-label">Công ty đã lưu</span>
-            <span class="tab-badge" id="nav-saved-count">0</span>
-          </a>
-        </nav>
+        <div class="flex items-center gap-2">
+          <nav class="tabbar">
+            <a href="/" class="tab">
+              <span data-icon="search" data-size="15"></span><span class="tab-label" data-i18n="nav.scan"></span>
+            </a>
+            <a href="/saved" class="tab tab-active">
+              <span data-icon="database" data-size="15"></span><span class="tab-label" data-i18n="nav.saved"></span>
+              <span class="tab-badge" id="nav-saved-count">0</span>
+            </a>
+          </nav>
+
+          <div class="langbar">
+            <button type="button" class="lang-btn" data-lang-btn="ko" data-i18n="lang.ko"></button>
+            <button type="button" class="lang-btn" data-lang-btn="vi" data-i18n="lang.vi"></button>
+          </div>
+        </div>
       </div>
     </header>
 
     <main class="mx-auto max-w-[1120px] px-5 md:px-6 py-8 md:py-12">
       <div class="mb-7">
-        <h1 class="text-[24px] md:text-[30px] font-[700] tracking-tight leading-[1.15] text-slate-900">
-          Công ty đã lưu
-        </h1>
-        <p class="mt-2 text-[13.5px] text-slate-500 leading-relaxed">
-          Toàn bộ công ty đã quét và lưu vào database. Bấm <strong class="font-semibold text-slate-700">Xem</strong>
-          để mở lại kết quả đầy đủ mà không phải quét lại.
-        </p>
+        <h1 class="text-[24px] md:text-[30px] font-[700] tracking-tight leading-[1.15] text-slate-900"
+            data-i18n="saved.heading"></h1>
+        <p class="mt-2 text-[13.5px] text-slate-500 leading-relaxed" id="saved-description"></p>
       </div>
 
       <div class="rounded-[20px] border border-slate-200 bg-white p-5 md:p-6 shadow-sm">
@@ -56,27 +59,28 @@
           <div class="flex items-center gap-3">
             <div class="h-9 w-9 rounded-xl bg-slate-900 text-white flex items-center justify-center" data-icon="database" data-size="18"></div>
             <div>
-              <h3 class="text-[15px] font-semibold leading-none">Danh sách</h3>
-              <p class="text-[12px] text-slate-500 mt-1.5" id="saved-count">Đang tải...</p>
+              <h3 class="text-[15px] font-semibold leading-none" data-i18n="saved.listHeading"></h3>
+              <p class="text-[12px] text-slate-500 mt-1.5" id="saved-count" data-i18n="saved.loading"></p>
             </div>
           </div>
           <div class="flex items-center gap-2">
             <div class="saved-search">
               <span class="saved-search-icon" data-icon="search" data-size="14"></span>
               <input id="saved-filter" type="text" class="saved-search-input" autocomplete="off"
-                placeholder="Tìm theo tên, email, lĩnh vực, website...">
+                data-i18n-placeholder="saved.searchPlaceholder">
             </div>
-            <button id="saved-refresh" class="h-9 px-3.5 rounded-full border border-slate-200 bg-white hover:bg-slate-50 text-[13px] font-medium">Làm mới</button>
+            <button id="saved-refresh" class="h-9 px-3.5 rounded-full border border-slate-200 bg-white hover:bg-slate-50 text-[13px] font-medium"
+                    data-i18n="saved.refresh"></button>
             <div class="relative">
               <button id="export-btn" class="h-9 px-4 rounded-full bg-blue-600 hover:bg-blue-700 text-white text-[13px] font-semibold flex items-center gap-1.5 shadow-sm">
-                <span data-icon="sheet" data-size="16"></span> Xuất <span data-icon="chevron" data-size="14"></span>
+                <span data-icon="sheet" data-size="16"></span> <span data-i18n="saved.export"></span> <span data-icon="chevron" data-size="14"></span>
               </button>
               <div id="export-menu" class="hidden absolute right-0 mt-2 w-[230px] rounded-xl border border-slate-200 bg-white shadow-xl p-1 z-20">
                 <button id="export-csv" class="w-full text-left px-3 py-2.5 rounded-lg hover:bg-slate-50 text-[13px] font-medium flex items-center gap-2">
-                  <span data-icon="sheet" data-size="16"></span> Xuất Excel (.csv)
+                  <span data-icon="sheet" data-size="16"></span> <span data-i18n="saved.exportCsv"></span>
                 </button>
                 <button id="export-json" class="w-full text-left px-3 py-2.5 rounded-lg hover:bg-slate-50 text-[13px] font-medium flex items-center gap-2">
-                  <span data-icon="json" data-size="16"></span> Xuất JSON đầy đủ (.json)
+                  <span data-icon="json" data-size="16"></span> <span data-i18n="saved.exportJson"></span>
                 </button>
               </div>
             </div>
@@ -87,14 +91,14 @@
           <table class="saved-table">
             <thead>
               <tr>
-                <th>Tên công ty</th>
-                <th>Địa chỉ</th>
-                <th>Số điện thoại</th>
-                <th>Email</th>
-                <th>Lĩnh vực</th>
-                <th>Website</th>
-                <th>IT Hiring</th>
-                <th>Cập nhật</th>
+                <th data-i18n="saved.col.name"></th>
+                <th data-i18n="saved.col.address"></th>
+                <th data-i18n="saved.col.phone"></th>
+                <th data-i18n="saved.col.email"></th>
+                <th data-i18n="saved.col.industry"></th>
+                <th data-i18n="saved.col.website"></th>
+                <th data-i18n="saved.col.hiring"></th>
+                <th data-i18n="saved.col.updated"></th>
                 <th></th>
               </tr>
             </thead>
@@ -102,17 +106,14 @@
           </table>
         </div>
 
-        <div id="saved-empty" class="hidden saved-empty">
-          Chưa có công ty nào. Sang trang "Quét mới", quét một website rồi bấm "Lưu vào database".
-        </div>
+        <div id="saved-empty" class="hidden saved-empty"></div>
       </div>
 
-      <div class="mt-14 text-center text-[11px] text-slate-400">
-        Company Scanner • Lead generation cho IT Outsourcing • Dữ liệu chỉ lấy từ website bạn nhập — không có dữ liệu = Not found
-      </div>
+      <div class="mt-14 text-center text-[11px] text-slate-400" data-i18n="footer.note"></div>
     </main>
   </div>
 
+  <script src="/static/i18n.js"></script>
   <script src="/static/app.js"></script>
 </body>
 </html>

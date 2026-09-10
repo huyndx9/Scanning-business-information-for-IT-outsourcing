@@ -6,7 +6,11 @@
    hoặc từ bản đã lưu trong database. Không có dữ liệu mẫu / mặc định /
    dự phòng ở bất kỳ đâu trong file này: thiếu dữ liệu thì hiện "Not found". */
 
-const NOT_FOUND = "Not found";
+// Chuỗi hiển thị đều lấy qua t() trong i18n.js (mặc định tiếng Hàn).
+const NOT_FOUND = () => t("common.notFound");
+
+// Mã lỗi server trả về; chữ hiển thị lấy theo ngôn ngữ đang chọn.
+const ERROR_CODES = ["invalid_url", "unreachable", "timeout", "blocked", "internal"];
 
 const ICONS = {
   globe: '<circle cx="12" cy="12" r="10"/><path d="M12 2a14.5 14.5 0 0 0 0 20 14.5 14.5 0 0 0 0-20"/><path d="M2 12h20"/>',
@@ -46,13 +50,14 @@ function esc(value) {
 /* Giá trị thật, hoặc chỗ trống "Not found". */
 function orNotFound(value, className = "") {
   if (value === null || value === undefined || value === "") {
-    return `<span class="text-slate-400 italic ${className}">${NOT_FOUND}</span>`;
+    return `<span class="text-slate-400 italic ${className}">${esc(NOT_FOUND())}</span>`;
   }
   return `<span class="${className}">${esc(value)}</span>`;
 }
 
-function sourceLink(url, label = "Nguồn") {
+function sourceLink(url, label) {
   if (!url) return "";
+  label = label || t("common.source");
   return `<a href="${esc(url)}" target="_blank" rel="noopener noreferrer"
     class="inline-flex items-center gap-1 text-[11px] font-medium text-blue-600 hover:text-blue-700 mt-1.5 break-all">
     ${icon("link", 11)} ${esc(label)}</a>`;
@@ -87,17 +92,9 @@ const isSavedPage = Boolean(document.getElementById("saved-rows"));
 // =========================================================================
 
 if (isScanPage) {
-  const STAGES = [
-    { id: "homepage", text: "Đang truy cập trang chủ..." },
-    { id: "company", text: "Đang tìm trang công ty..." },
-    { id: "contact", text: "Đang tìm thông tin liên hệ..." },
-    { id: "management", text: "Đang tìm ban lãnh đạo..." },
-    { id: "recruitment", text: "Đang tìm tuyển dụng..." },
-    { id: "extract", text: "Đang trích xuất thông tin..." },
-    { id: "done", text: "Hoàn thành." },
-  ];
-
-  const SAVE_LABELS = { idle: "Lưu vào database", saving: "Đang lưu...", saved: "Đã lưu", error: "Lưu lại" };
+  const STAGE_IDS = ["homepage", "company", "contact", "management", "recruitment", "extract", "done"];
+  const stageText = (id) => t("stage." + id);
+  const saveLabel = (state) => t("result.save." + state);
 
   const SIGNAL_STYLES = {
     High: "bg-emerald-50 border-emerald-200 text-emerald-700",
@@ -142,7 +139,7 @@ if (isScanPage) {
           ? icon("loader", 9, "animate-spin")
           : String(index + 1);
       return `<span class="stage ${tone}">
-        <span class="stage-dot">${bullet}</span>${esc(stage.text)}</span>`;
+        <span class="stage-dot">${bullet}</span>${esc(stageText(stage.id))}</span>`;
     }).join("");
   }
 
@@ -160,7 +157,7 @@ if (isScanPage) {
   function setScanning(value) {
     scanning = value;
     scanBtn.disabled = value || !urlInput.value.trim();
-    scanBtnLabel.textContent = value ? "Đang quét..." : "Quét ngay";
+    scanBtnLabel.textContent = value ? t("scan.buttonBusy") : t("scan.button");
     scanBtn.firstElementChild.innerHTML = value ? icon("loader", 16, "animate-spin") : icon("sparkles", 16);
   }
 
@@ -206,12 +203,12 @@ if (isScanPage) {
         <div class="flex items-center gap-3">
           <div class="h-9 w-9 rounded-xl bg-blue-600 text-white flex items-center justify-center">${icon("building", 20)}</div>
           <div>
-            <h3 class="text-[15px] font-semibold leading-none">Thông tin công ty</h3>
-            <p class="text-[12px] text-slate-500 mt-1.5">Trích xuất từ ${data.pages_crawled || 0} trang đã crawl</p>
+            <h3 class="text-[15px] font-semibold leading-none">${esc(t("result.company.heading"))}</h3>
+            <p class="text-[12px] text-slate-500 mt-1.5">${esc(t("result.company.desc", { pages: data.pages_crawled || 0 }))}</p>
           </div>
         </div>
         ${company.website ? `<a href="${esc(company.website)}" target="_blank" rel="noopener noreferrer"
-          class="inline-flex items-center gap-1 text-[12px] font-medium text-blue-600 hover:text-blue-700">Mở website ${icon("external", 12)}</a>` : ""}
+          class="inline-flex items-center gap-1 text-[12px] font-medium text-blue-600 hover:text-blue-700">${esc(t("result.company.openSite"))} ${icon("external", 12)}</a>` : ""}
       </div>
 
       <div class="space-y-4">
@@ -221,11 +218,11 @@ if (isScanPage) {
         </div>
 
         <div class="grid grid-cols-1 md:grid-cols-2 gap-3 pt-2">
-          ${infoTile("mappin", "Địa chỉ trụ sở", company.address, sources.address)}
-          ${infoTile("phone", "Điện thoại", company.phone, sources.phone)}
-          ${infoTile("mail", "Email", company.email, sources.email)}
-          ${infoTile("briefcase", "Lĩnh vực hoạt động", company.industry, sources.industry)}
-          ${infoTile("globe", "Website", company.website, null)}
+          ${infoTile("mappin", t("result.company.address"), company.address, sources.address)}
+          ${infoTile("phone", t("result.company.phone"), company.phone, sources.phone)}
+          ${infoTile("mail", t("result.company.email"), company.email, sources.email)}
+          ${infoTile("briefcase", t("result.company.industry"), company.industry, sources.industry)}
+          ${infoTile("globe", t("result.company.website"), company.website, null)}
         </div>
       </div>
     </div>`;
@@ -234,7 +231,7 @@ if (isScanPage) {
   function renderContactsCard(data) {
     const contacts = data.key_contacts || [];
     const body = contacts.length === 0
-      ? `<div class="rounded-xl border border-dashed border-slate-200 p-4 text-[12.5px] text-slate-400 italic">Key contacts not found.</div>`
+      ? `<div class="rounded-xl border border-dashed border-slate-200 p-4 text-[12.5px] text-slate-400 italic">${esc(t("result.contacts.empty"))}</div>`
       : contacts.map((contact, index) => `
         <div class="flex items-center gap-3.5 rounded-xl border border-slate-200 p-3 hover:bg-slate-50 transition-colors group">
           <div class="h-11 w-11 rounded-full ${AVATAR_COLORS[index % AVATAR_COLORS.length]} text-white flex items-center justify-center text-[12px] font-bold tracking-wide shadow-sm">${esc(initials(contact.name))}</div>
@@ -249,8 +246,8 @@ if (isScanPage) {
       <div class="flex items-center gap-3 mb-5">
         <div class="h-9 w-9 rounded-xl bg-slate-900 text-white flex items-center justify-center">${icon("users", 20)}</div>
         <div>
-          <h3 class="text-[15px] font-semibold leading-none">Key contacts</h3>
-          <p class="text-[12px] text-slate-500 mt-1.5">Ưu tiên CTO / CIO / IT — tối đa 3 người</p>
+          <h3 class="text-[15px] font-semibold leading-none">${esc(t("result.contacts.heading"))}</h3>
+          <p class="text-[12px] text-slate-500 mt-1.5">${esc(t("result.contacts.desc"))}</p>
         </div>
       </div>
       <div class="space-y-3">${body}</div>
@@ -266,7 +263,7 @@ if (isScanPage) {
       .join("");
 
     const body = jobs.length === 0
-      ? `<div class="rounded-xl border border-dashed border-slate-200 p-4 text-[12.5px] text-slate-400 italic">No IT recruitment information found.</div>`
+      ? `<div class="rounded-xl border border-dashed border-slate-200 p-4 text-[12.5px] text-slate-400 italic">${esc(t("result.jobs.empty"))}</div>`
       : `<div class="grid grid-cols-1 md:grid-cols-2 gap-3">${jobs.map((job) => `
           <a href="${esc(job.source_url)}" target="_blank" rel="noopener noreferrer"
             class="group rounded-xl border border-slate-200 p-4 hover:border-slate-900 hover:bg-slate-50 transition-all flex flex-col">
@@ -284,11 +281,11 @@ if (isScanPage) {
         <div class="flex items-center gap-3">
           <div class="h-9 w-9 rounded-xl bg-emerald-600 text-white flex items-center justify-center">${icon("briefcase", 20)}</div>
           <div>
-            <h3 class="text-[15px] font-semibold leading-none">Tuyển dụng IT</h3>
-            <p class="text-[12px] text-slate-500 mt-1.5">${jobs.length} vị trí IT tìm thấy trên website</p>
+            <h3 class="text-[15px] font-semibold leading-none">${esc(t("result.jobs.heading"))}</h3>
+            <p class="text-[12px] text-slate-500 mt-1.5">${esc(t("result.jobs.desc", { count: jobs.length }))}</p>
           </div>
         </div>
-        <span class="inline-flex h-6 items-center px-2.5 rounded-full border text-[11px] font-semibold ${SIGNAL_STYLES[signal] || SIGNAL_STYLES.None}">IT Hiring: ${esc(signal)}</span>
+        <span class="inline-flex h-6 items-center px-2.5 rounded-full border text-[11px] font-semibold ${SIGNAL_STYLES[signal] || SIGNAL_STYLES.None}">${esc(t("signal.label", { level: t("signal." + signal) }))}</span>
       </div>
       ${body}
     </div>`;
@@ -301,8 +298,8 @@ if (isScanPage) {
       <div class="flex items-center gap-3 mb-4">
         <div class="h-9 w-9 rounded-xl bg-slate-100 text-slate-600 flex items-center justify-center">${icon("link", 18)}</div>
         <div>
-          <h3 class="text-[15px] font-semibold leading-none">Nguồn dữ liệu</h3>
-          <p class="text-[12px] text-slate-500 mt-1.5">${sources.length} trang thuộc domain đã quét</p>
+          <h3 class="text-[15px] font-semibold leading-none">${esc(t("result.sources.heading"))}</h3>
+          <p class="text-[12px] text-slate-500 mt-1.5">${esc(t("result.sources.desc", { count: sources.length }))}</p>
         </div>
       </div>
       <div class="space-y-1.5 max-h-[240px] overflow-y-auto">
@@ -329,16 +326,16 @@ if (isScanPage) {
       <div class="flex items-center gap-3">
         <div class="h-8 w-8 rounded-full bg-emerald-600 flex items-center justify-center text-white">${icon("check", 16)}</div>
         <div>
-          <div class="text-[14px] font-semibold leading-none">Đã quét xong</div>
-          <div class="text-[12px] text-slate-500 mt-1">Nguồn: ${esc(website)} • ${result.pages_crawled || 0} trang đã crawl</div>
+          <div class="text-[14px] font-semibold leading-none">${esc(t("result.done"))}</div>
+          <div class="text-[12px] text-slate-500 mt-1">${esc(t("result.summary", { website: website, pages: result.pages_crawled || 0 }))}</div>
         </div>
       </div>
       <div class="flex items-center gap-2">
         <button id="save-btn" class="h-9 px-3.5 rounded-full border text-[13px] font-medium flex items-center gap-1.5 transition-colors ${saveState === "saved" ? "bg-emerald-50 text-emerald-700 border-emerald-200" : "bg-white border-slate-200 hover:bg-slate-50"}">
-          ${icon(saveState === "saved" ? "check" : "save", 16)} ${SAVE_LABELS[saveState]}
+          ${icon(saveState === "saved" ? "check" : "save", 16)} ${esc(saveLabel(saveState))}
         </button>
         <button id="json-btn" class="h-9 px-3.5 rounded-full border text-[13px] font-medium flex items-center gap-1.5 transition-colors ${showJson ? "bg-slate-900 text-white border-slate-900" : "bg-white border-slate-200 hover:bg-slate-50"}">
-          ${icon("json", 16)} ${showJson ? "Ẩn JSON" : "Xem JSON"}
+          ${icon("json", 16)} ${esc(showJson ? t("result.json.hide") : t("result.json.show"))}
         </button>
       </div>
     </div>`;
@@ -346,8 +343,8 @@ if (isScanPage) {
     const body = showJson
       ? `<div class="rounded-[16px] border border-slate-200 bg-[#0b1220] overflow-hidden">
           <div class="flex items-center justify-between px-5 h-11 border-b border-white/10">
-            <span class="text-[12px] font-medium text-white/70 tracking-wide uppercase">Structured JSON Output</span>
-            <button id="copy-json" class="text-[11px] px-2.5 h-7 rounded-full bg-white/10 hover:bg-white/15 text-white transition-colors">Copy</button>
+            <span class="text-[12px] font-medium text-white/70 tracking-wide uppercase">${esc(t("result.json.heading"))}</span>
+            <button id="copy-json" class="text-[11px] px-2.5 h-7 rounded-full bg-white/10 hover:bg-white/15 text-white transition-colors">${esc(t("result.json.copy"))}</button>
           </div>
           <pre class="p-5 text-[12.5px] leading-6 text-blue-100/90 overflow-x-auto font-[JetBrains_Mono,monospace] max-h-[520px]">${esc(json)}</pre>
         </div>`
@@ -401,7 +398,7 @@ if (isScanPage) {
       refreshNavBadge();
     } catch (_) {
       saveState = "error";
-      showError("Không lưu được vào database.", "Kiểm tra cửa sổ server rồi thử lại.");
+      showError(t("error.saveFailed"), t("error.saveFailedDetail"));
     }
     renderResults();
   }
@@ -419,7 +416,7 @@ if (isScanPage) {
       setScanning(false);
       renderResults();
     } catch (_) {
-      showError("Không mở được công ty đã lưu.", "Có thể công ty này đã bị xoá khỏi database.");
+      showError(t("error.openSavedFailed"), t("error.openSavedFailedDetail"));
     }
   }
 
@@ -434,7 +431,7 @@ if (isScanPage) {
     showJson = false;
     saveState = "idle";
     renderResults();
-    stageState = STAGES.map((stage, index) => ({ ...stage, done: false, active: index === 0 }));
+    stageState = STAGE_IDS.map((id, index) => ({ id, done: false, active: index === 0 }));
     setScanning(true);
     renderProgress();
 
@@ -463,9 +460,11 @@ if (isScanPage) {
       renderProgress();
       eventSource.close();
       if (payload) {
-        showError(payload.message || "Scan failed.", payload.code ? `code: ${payload.code}` : "");
+        const known = payload.code && ERROR_CODES.includes(payload.code);
+        showError(known ? t("error." + payload.code) : (payload.message || t("error.internal")),
+                  payload.code ? "code: " + payload.code : "");
       } else {
-        showError("Unable to access website.", "Mất kết nối tới server khi đang quét.");
+        showError(t("error.unreachable"), t("error.disconnected"));
       }
     };
 
@@ -491,6 +490,13 @@ if (isScanPage) {
   renderProgress();
   refreshNavBadge();
 
+  // Đổi ngôn ngữ: vẽ lại kết quả đang hiển thị thay vì bắt quét lại.
+  window.addEventListener("langchange", () => {
+    setScanning(scanning);
+    renderProgress();
+    renderResults();
+  });
+
   const requestedCompany = new URLSearchParams(window.location.search).get("company");
   if (requestedCompany) loadSavedCompany(requestedCompany);
 }
@@ -509,12 +515,13 @@ if (isSavedPage) {
 
   function signalPill(level, jobs) {
     const tone = { High: "high", Medium: "medium", Low: "low", None: "none" }[level] || "none";
-    return `<span class="saved-pill saved-pill-${tone}">${esc(level || "None")} · ${Number(jobs) || 0} vị trí</span>`;
+    const levelText = t("signal." + (level || "None"));
+    return `<span class="saved-pill saved-pill-${tone}">${esc(levelText)} · ${esc(t("saved.jobsUnit", { count: Number(jobs) || 0 }))}</span>`;
   }
 
   function cell(value, truncate = false) {
     if (value === null || value === undefined || value === "") {
-      return `<span class="saved-muted">${NOT_FOUND}</span>`;
+      return `<span class="saved-muted">${esc(NOT_FOUND())}</span>`;
     }
     return truncate ? `<span class="saved-truncate" title="${esc(value)}">${esc(value)}</span>` : esc(value);
   }
@@ -523,7 +530,8 @@ if (isSavedPage) {
     if (!value) return "";
     const parsed = new Date(value);
     if (Number.isNaN(parsed.getTime())) return "";
-    return parsed.toLocaleDateString("vi-VN", { day: "2-digit", month: "2-digit", year: "numeric" });
+    const locale = i18n.getLang() === "ko" ? "ko-KR" : "vi-VN";
+    return parsed.toLocaleDateString(locale, { day: "2-digit", month: "2-digit", year: "numeric" });
   }
 
   /* Danh sách đang hiển thị: toàn bộ, hoặc phần khớp ô tìm kiếm. */
@@ -541,14 +549,16 @@ if (isSavedPage) {
 
     setNavBadge(savedCompanies.length);
     savedCount.textContent = query
-      ? `${companies.length}/${savedCompanies.length} công ty khớp "${savedFilter.value.trim()}"`
-      : `${savedCompanies.length} công ty trong database`;
+      ? t("saved.countFiltered", {
+          shown: companies.length, total: savedCompanies.length, query: savedFilter.value.trim(),
+        })
+      : t("saved.count", { total: savedCompanies.length });
 
     savedEmpty.classList.toggle("hidden", companies.length > 0);
     if (companies.length === 0) {
       savedEmpty.textContent = savedCompanies.length === 0
-        ? 'Chưa có công ty nào. Sang trang "Quét mới", quét một website rồi bấm "Lưu vào database".'
-        : "Không có công ty nào khớp từ khoá.";
+        ? t("saved.empty")
+        : t("saved.emptyFiltered");
       savedRows.innerHTML = "";
       return;
     }
@@ -560,18 +570,18 @@ if (isSavedPage) {
         <td>${cell(company.phone)}</td>
         <td>${company.email
           ? `<a href="mailto:${esc(company.email)}" class="saved-truncate text-blue-600 hover:text-blue-700" title="${esc(company.email)}">${esc(company.email)}</a>`
-          : `<span class="saved-muted">${NOT_FOUND}</span>`}</td>
+          : `<span class="saved-muted">${esc(NOT_FOUND())}</span>`}</td>
         <td>${cell(company.industry, true)}</td>
         <td>${company.website
           ? `<a href="${esc(company.website)}" target="_blank" rel="noopener noreferrer"
                class="saved-truncate text-blue-600 hover:text-blue-700" title="${esc(company.website)}">${esc(company.domain || company.website)}</a>`
-          : `<span class="saved-muted">${NOT_FOUND}</span>`}</td>
+          : `<span class="saved-muted">${esc(NOT_FOUND())}</span>`}</td>
         <td>${signalPill(company.it_hiring, company.it_jobs)}</td>
         <td class="saved-date">${esc(localDate(company.updated_at))}</td>
         <td>
           <div class="saved-actions">
-            <button class="saved-btn" data-action="open" data-id="${company.id}">Xem</button>
-            <button class="saved-btn saved-btn-danger" data-action="delete" data-id="${company.id}">Xoá</button>
+            <button class="saved-btn" data-action="open" data-id="${company.id}">${esc(t("saved.action.view"))}</button>
+            <button class="saved-btn saved-btn-danger" data-action="delete" data-id="${company.id}">${esc(t("saved.action.delete"))}</button>
           </div>
         </td>
       </tr>`).join("");
@@ -585,18 +595,18 @@ if (isSavedPage) {
       savedCompanies = payload.companies || [];
       renderSaved();
     } catch (_) {
-      savedCount.textContent = "Không tải được danh sách. Kiểm tra server rồi bấm Làm mới.";
+      savedCount.textContent = t("saved.loadFailed");
     }
   }
 
   async function deleteSaved(id, name) {
-    if (!window.confirm(`Xoá "${name || "công ty này"}" khỏi database?`)) return;
+    if (!window.confirm(t("saved.confirmDelete", { name: name || t("saved.thisCompany") }))) return;
     try {
       const response = await fetch(`/api/companies/${id}`, { method: "DELETE" });
       if (!response.ok) throw new Error(String(response.status));
       await loadSaved();
     } catch (_) {
-      savedCount.textContent = "Không xoá được. Thử lại sau.";
+      savedCount.textContent = t("saved.deleteFailed");
     }
   }
 
@@ -619,23 +629,23 @@ if (isSavedPage) {
   function exportFileName(extension) {
     const query = savedFilter.value.trim();
     const suffix = query ? `_${query.replace(/[^\p{L}\p{N}]+/gu, "_")}` : "";
-    return `cong_ty_da_luu${suffix}.${extension}`;
+    return `saved_companies${suffix}.${extension}`;
   }
 
   function exportCsv() {
     const companies = visibleCompanies();
     const rows = [[
-      "Tên công ty", "Địa chỉ", "Số điện thoại", "Email", "Lĩnh vực", "Website",
-      "IT Hiring", "Số vị trí IT", "Số key contacts", "Cập nhật",
+      t("csv.name"), t("csv.address"), t("csv.phone"), t("csv.email"), t("csv.industry"),
+      t("csv.website"), t("csv.hiring"), t("csv.jobCount"), t("csv.contactCount"), t("csv.updated"),
     ]];
     companies.forEach((company) => rows.push([
-      company.name || NOT_FOUND,
-      company.address || NOT_FOUND,
-      company.phone || NOT_FOUND,
-      company.email || NOT_FOUND,
-      company.industry || NOT_FOUND,
-      company.website || NOT_FOUND,
-      company.it_hiring || "None",
+      company.name || NOT_FOUND(),
+      company.address || NOT_FOUND(),
+      company.phone || NOT_FOUND(),
+      company.email || NOT_FOUND(),
+      company.industry || NOT_FOUND(),
+      company.website || NOT_FOUND(),
+      t("signal." + (company.it_hiring || "None")),
       company.it_jobs ?? 0,
       company.contacts ?? 0,
       localDate(company.updated_at),
@@ -653,7 +663,7 @@ if (isSavedPage) {
       if (!response.ok) throw new Error(String(response.status));
       detailed = (await response.json()).companies || [];
     } catch (_) {
-      savedCount.textContent = "Không tải được dữ liệu đầy đủ để xuất JSON.";
+      savedCount.textContent = t("saved.exportFailed");
       return;
     }
     const keep = new Set(visibleCompanies().map((company) => company.id));
@@ -684,5 +694,20 @@ if (isSavedPage) {
   document.getElementById("saved-refresh").addEventListener("click", loadSaved);
   savedFilter.addEventListener("input", renderSaved);
 
+  /* Câu mô tả có chèn tên nút "Xem" nên phải dựng bằng JS, không dùng data-i18n. */
+  function renderDescription() {
+    const description = document.getElementById("saved-description");
+    if (!description) return;
+    description.innerHTML = esc(t("saved.description", { view: "\u0000" }))
+      .replace("\u0000", `<strong class="font-semibold text-slate-700">${esc(t("saved.action.view"))}</strong>`);
+  }
+
+  // Đổi ngôn ngữ: vẽ lại phần động (bảng, mô tả) chứ không phải tải lại trang.
+  window.addEventListener("langchange", () => {
+    renderDescription();
+    renderSaved();
+  });
+
+  renderDescription();
   loadSaved();
 }
