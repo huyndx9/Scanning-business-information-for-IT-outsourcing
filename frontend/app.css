@@ -320,3 +320,6 @@
   .langbar { padding: 2px; }
   .lang-btn { height: 26px; padding: 0 8px; font-size: 11px; }
 }
+
+/* Menu xuat file: prototype khong build w-[230px] nen menu co lai va xuong dong. */
+#export-menu { width: 250px; white-space: nowrap; }

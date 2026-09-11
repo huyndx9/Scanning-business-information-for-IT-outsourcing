@@ -8,6 +8,98 @@ Nhập URL → app truy cập website thật, crawl các trang liên quan (giớ
 ban lãnh đạo, tuyển dụng) và trích xuất thông tin có ích cho sales. Không có mock data:
 mỗi URL là một lần scan độc lập, không tìm thấy thì trả `Not found`.
 
+## Tính năng
+
+Ảnh dưới đây là ảnh chụp thật của app, dữ liệu là kết quả quét thật từ website
+`scatterlab.co.kr`. Chụp lại bằng `python backend/take_screenshots.py`.
+
+### 1. Nhập URL, quét website thật
+
+![Trang quét](docs/screenshots/01-scan-home.png)
+
+Dán địa chỉ website công ty Hàn Quốc rồi bấm **스캔 시작**. App truy cập website thật,
+không dùng dữ liệu mẫu hay dữ liệu dự phòng — mỗi URL là một lần quét độc lập. Giao
+diện mặc định tiếng Hàn, chuyển sang tiếng Việt bằng nút ở góc phải.
+
+### 2. Tiến trình phản ánh đúng việc crawler đang làm
+
+![Tiến trình quét](docs/screenshots/02-scan-progress.png)
+
+Bảy bước: truy cập trang chủ → tìm trang giới thiệu → liên hệ → ban lãnh đạo →
+tuyển dụng → trích xuất → hoàn thành. Trạng thái được đẩy từ server qua Server-Sent
+Events ngay khi crawler chuyển bước, nên đây là tiến trình thật chứ không phải hiệu
+ứng chạy theo đồng hồ.
+
+### 3. Thông tin công ty và key contacts, mỗi trường kèm nguồn
+
+![Thông tin công ty và key contacts](docs/screenshots/03-result-company-contacts.png)
+
+Tên, địa chỉ trụ sở, điện thoại, email, lĩnh vực — mỗi ô có link **출처** trỏ về đúng
+trang chứa thông tin đó, để sales kiểm chứng trước khi liên hệ. Bên phải là tối đa 3
+người phụ trách quyết định IT, ưu tiên CTO → CIO → phụ trách IT/phát triển → CEO.
+Thiếu dữ liệu thì hiển thị `찾을 수 없음`, không đoán, không lấp bằng công ty khác.
+
+### 4. Tin tuyển dụng IT và tín hiệu IT Hiring
+
+![Tuyển dụng IT](docs/screenshots/04-result-jobs.png)
+
+Chỉ lấy vị trí IT/phần mềm (tối đa 10), bỏ qua kinh doanh, kế toán, nhân sự. Mỗi tin
+có vị trí, loại hình, hạn nộp và link đến đúng trang tuyển dụng. Góc phải là tín hiệu
+**IT 채용**: 5+ tin → 높음, 2–4 → 보통, 1 → 낮음, 0 → 없음 — công ty đang tuyển nhiều
+IT là công ty đang cần nguồn lực.
+
+### 5. Nguồn dữ liệu — mọi thứ đều có bằng chứng
+
+![Nguồn dữ liệu](docs/screenshots/05-result-sources.png)
+
+Danh sách toàn bộ trang đã crawl, tất cả đều thuộc domain đã nhập. Link sang domain
+khác — blog, portal tuyển dụng ngoài — đều bị loại để không lẫn dữ liệu của công ty khác.
+
+### 6. JSON có cấu trúc
+
+![JSON viewer](docs/screenshots/06-json-view.png)
+
+Bấm **JSON 보기** để xem đúng cấu trúc mà API trả về, có nút copy — dùng khi cần đưa
+kết quả vào hệ thống khác.
+
+### 7. Lưu vào database
+
+![Nút lưu](docs/screenshots/07-save-button.png)
+
+Một nút **데이터베이스에 저장**. Khoá theo domain: quét lại cùng website sẽ cập nhật
+dòng cũ chứ không tạo bản trùng.
+
+### 8. Danh sách công ty đã lưu
+
+![Danh sách đã lưu](docs/screenshots/08-saved-list.png)
+
+Trang riêng `/saved` liệt kê mọi công ty đã lưu với tên, địa chỉ, điện thoại, email,
+lĩnh vực, website, IT Hiring kèm số lượng, ngày cập nhật. **보기** mở lại toàn bộ kết
+quả mà không phải quét lại; **삭제** xoá sau khi xác nhận.
+
+### 9. Tìm kiếm và xuất Excel / JSON
+
+![Tìm kiếm và xuất](docs/screenshots/09-saved-search-export.png)
+
+Ô tìm kiếm lọc tại chỗ theo tên, email, lĩnh vực, website, địa chỉ. Nút **내보내기**
+xuất **đúng những dòng đang hiển thị** ra Excel (.csv, có BOM để mở đúng tiếng Hàn)
+hoặc JSON đầy đủ — muốn lấy riêng một công ty thì lọc tên rồi xuất.
+
+### 10. Hai ngôn ngữ
+
+![Giao diện tiếng Việt](docs/screenshots/10-language-vietnamese.png)
+
+Cùng một giao diện bằng tiếng Việt. Đổi ngôn ngữ áp dụng ngay, kết quả đang xem vẫn
+giữ nguyên, lựa chọn được nhớ cho lần sau.
+
+### 11. Thông báo lỗi rõ ràng
+
+![Thông báo lỗi](docs/screenshots/11-error.png)
+
+Website không truy cập được, timeout, bị chặn, URL không hợp lệ — mỗi trường hợp một
+thông báo riêng kèm mã lỗi. Địa chỉ nội bộ như `localhost` hay IP private bị chặn ngay
+từ đầu để app không thể bị lợi dụng quét mạng nội bộ.
+
 ## Ngôn ngữ
 
 Giao diện mặc định là **tiếng Hàn**. Nút ở góc phải header đổi qua lại 한국어 ↔ Tiếng Việt
@@ -98,6 +190,7 @@ start.py                   Launcher: kiểm tra môi trường, chọn port, m�
 backend/scan_cli.py        Quét từ terminal
 backend/test_scanner.py    Test offline
 backend/check_i18n.py      Kiểm tra bản dịch
+backend/take_screenshots.py Chụp ảnh thật của app cho README (Playwright)
 frontend/index.html        Trang "Quét mới" (giữ nguyên layout của prototype)
 frontend/saved.html        Trang "Công ty đã lưu"
 frontend/i18n.js           Từ điển tiếng Hàn/tiếng Việt, chuyển ngôn ngữ
