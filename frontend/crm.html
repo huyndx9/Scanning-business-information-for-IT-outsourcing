@@ -1,0 +1,298 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title data-i18n-title="crm.title">Company Scanner</title>
+  <link rel="icon" type="image/png" sizes="32x32" href="/static/favicon-32.png">
+  <link rel="icon" href="/static/favicon.ico" sizes="any">
+  <link rel="apple-touch-icon" href="/static/favicon-180.png">
+  <link rel="stylesheet" href="/static/tailwind.css">
+  <link rel="stylesheet" href="/static/app.css">
+</head>
+<body>
+  <div class="min-h-screen bg-[#fcfcfd] text-slate-900 font-[system-ui,sans-serif] selection:bg-blue-100">
+
+    <header class="sticky top-0 z-30 backdrop-blur-xl bg-white/80 border-b border-slate-200/70">
+      <div class="mx-auto max-w-[1120px] px-5 md:px-6 h-[64px] flex items-center justify-between">
+        <div class="flex items-center gap-3">
+          <a href="/" class="brand-logo-link" aria-label="Company Scanner">
+            <img class="brand-logo" src="/static/magnifying_blue_icon.png" alt="Company Scanner">
+          </a>
+          <div class="leading-tight">
+            <div class="flex items-baseline gap-2">
+              <span class="font-semibold text-[15px] tracking-tight">Company Scanner</span>
+              <span class="hidden md:inline text-[11px] font-medium px-2 py-0.5 rounded-full bg-blue-50 text-blue-700 border border-blue-100">Live</span>
+            </div>
+            <div class="text-[12.5px] text-slate-500 -mt-0.5 hidden md:block" data-i18n="brand.subtitle"></div>
+          </div>
+        </div>
+
+        <div class="flex items-center gap-2">
+          <nav class="tabbar">
+            <a href="/" class="tab">
+              <span data-icon="search" data-size="15"></span><span class="tab-label" data-i18n="nav.scan"></span>
+            </a>
+            <a href="/saved" class="tab">
+              <span data-icon="database" data-size="15"></span><span class="tab-label" data-i18n="nav.saved"></span>
+              <span class="tab-badge" id="nav-saved-count">0</span>
+            </a>
+            <a href="/crm" class="tab tab-active">
+              <span data-icon="users" data-size="15"></span><span class="tab-label" data-i18n="nav.crm"></span>
+              <span class="tab-badge" id="nav-crm-count">0</span>
+            </a>
+          </nav>
+
+          <div class="langbar">
+            <button type="button" class="lang-btn" data-lang-btn="ko" data-i18n="lang.ko"></button>
+            <button type="button" class="lang-btn" data-lang-btn="vi" data-i18n="lang.vi"></button>
+          </div>
+        </div>
+      </div>
+    </header>
+
+    <main class="mx-auto max-w-[1120px] px-5 md:px-6 py-8 md:py-10">
+
+      <div class="crm-head">
+        <div>
+          <h1 class="text-[24px] md:text-[30px] font-[700] tracking-tight leading-[1.15] text-slate-900" data-i18n="crm.heading"></h1>
+          <p class="mt-2 text-[13.5px] text-slate-500 leading-relaxed" data-i18n="crm.description"></p>
+        </div>
+        <div class="crm-head-actions">
+          <div class="relative">
+            <button id="crm-export-btn" class="crm-btn">
+              <span data-icon="sheet" data-size="15"></span> <span data-i18n="crm.export"></span> <span data-icon="chevron" data-size="13"></span>
+            </button>
+            <div id="crm-export-menu" class="hidden crm-menu">
+              <button id="crm-export-csv" class="crm-menu-item"><span data-icon="sheet" data-size="15"></span> <span data-i18n="crm.exportCsv"></span></button>
+              <button id="crm-export-json" class="crm-menu-item"><span data-icon="json" data-size="15"></span> <span data-i18n="crm.exportJson"></span></button>
+            </div>
+          </div>
+          <button id="crm-import-btn" class="crm-btn"><span data-icon="upload" data-size="15"></span> <span data-i18n="crm.import"></span></button>
+          <button id="crm-add-btn" class="crm-btn crm-btn-primary"><span data-icon="plus" data-size="15"></span> <span data-i18n="crm.add"></span></button>
+        </div>
+      </div>
+
+      <!-- KPI -->
+      <div class="crm-kpis" id="crm-kpis"></div>
+
+      <!-- Bộ lọc -->
+      <div class="crm-toolbar">
+        <div class="saved-search">
+          <span class="saved-search-icon" data-icon="search" data-size="14"></span>
+          <input id="crm-search" type="text" class="saved-search-input crm-search" autocomplete="off" data-i18n-placeholder="crm.search">
+        </div>
+        <div class="crm-seg" id="crm-quick">
+          <button class="crm-seg-btn crm-seg-active" data-quick="all" data-i18n="crm.filter.all"></button>
+          <button class="crm-seg-btn" data-quick="hot" data-i18n="crm.filter.hot"></button>
+          <button class="crm-seg-btn" data-quick="overdue" data-i18n="crm.filter.overdue"></button>
+          <button class="crm-seg-btn" data-quick="week" data-i18n="crm.filter.thisWeek"></button>
+        </div>
+        <div class="crm-status-filters" id="crm-status-filters"></div>
+        <select id="crm-assignee" class="crm-select crm-select-sm"></select>
+        <div class="crm-seg crm-seg-dark" id="crm-view">
+          <button class="crm-seg-btn crm-seg-active" data-view="table" data-i18n="crm.view.table"></button>
+          <button class="crm-seg-btn" data-view="kanban" data-i18n="crm.view.kanban"></button>
+        </div>
+      </div>
+
+      <p class="crm-count" id="crm-count"></p>
+
+      <!-- Bảng -->
+      <div id="crm-table-wrap" class="rounded-[20px] border border-slate-200 bg-white shadow-sm crm-card">
+        <div class="saved-wrap">
+          <table class="crm-table">
+            <thead>
+              <tr>
+                <th class="crm-th-check"><input type="checkbox" id="crm-check-all"></th>
+                <th data-i18n="crm.col.company"></th>
+                <th data-i18n="crm.col.contact"></th>
+                <th data-i18n="crm.col.source"></th>
+                <th data-i18n="crm.col.tech"></th>
+                <th data-i18n="crm.col.budget"></th>
+                <th data-i18n="crm.col.timing"></th>
+                <th data-i18n="crm.col.score"></th>
+                <th data-i18n="crm.col.status"></th>
+                <th data-i18n="crm.col.next"></th>
+              </tr>
+            </thead>
+            <tbody id="crm-rows"></tbody>
+          </table>
+        </div>
+        <div id="crm-empty" class="hidden crm-empty"></div>
+      </div>
+
+      <!-- Kanban -->
+      <div id="crm-kanban" class="hidden crm-kanban"></div>
+
+      <div class="mt-14 text-center text-[11px] text-slate-400" data-i18n="footer.note"></div>
+    </main>
+
+    <!-- Thanh thao tác hàng loạt -->
+    <div id="crm-bulk" class="hidden crm-bulk">
+      <span id="crm-bulk-count" class="crm-bulk-label"></span>
+      <select id="crm-bulk-status" class="crm-select crm-select-sm"></select>
+      <button id="crm-bulk-delete" class="crm-btn crm-btn-danger"><span data-icon="trash" data-size="14"></span> <span data-i18n="crm.bulk.delete"></span></button>
+      <button id="crm-bulk-clear" class="crm-btn"><span data-i18n="crm.bulk.clear"></span></button>
+    </div>
+
+    <!-- Modal lead -->
+    <div id="lead-modal" class="hidden crm-overlay">
+      <div class="crm-modal crm-modal-wide">
+        <div class="crm-modal-head">
+          <div>
+            <h3 id="lead-modal-title" class="text-[16px] font-bold"></h3>
+            <p id="lead-modal-sub" class="text-[12px] text-slate-500 mt-0.5"></p>
+          </div>
+          <div class="flex items-center gap-2">
+            <div id="lead-score" class="crm-score-box hidden"></div>
+            <button type="button" class="crm-icon-btn" data-close="lead-modal" aria-label="close"><span data-icon="x" data-size="18"></span></button>
+          </div>
+        </div>
+
+        <form id="lead-form" class="crm-form" autocomplete="off">
+          <div class="crm-form-grid">
+            <section class="crm-fieldset">
+              <h4 data-i18n="crm.form.sectionCompany"></h4>
+              <label><span><span data-i18n="crm.form.company"></span> *</span><input name="company_name" required></label>
+              <div class="crm-row-2">
+                <label><span data-i18n="crm.form.biz"></span><input name="biz_number" placeholder="000-00-00000" inputmode="numeric"></label>
+                <label><span data-i18n="crm.form.size"></span><select name="company_size" data-options="size" data-blank="1"></select></label>
+              </div>
+              <div class="crm-row-2">
+                <label><span data-i18n="crm.form.website"></span><input name="website" placeholder="https://"></label>
+                <label><span data-i18n="crm.form.industry"></span><input name="industry"></label>
+              </div>
+              <label><span data-i18n="crm.form.competitor"></span><input name="competitor" data-i18n-placeholder="crm.form.competitorHint"></label>
+            </section>
+
+            <section class="crm-fieldset">
+              <h4 data-i18n="crm.form.sectionContact"></h4>
+              <div class="crm-row-2">
+                <label><span data-i18n="crm.form.contactName"></span><input name="contact_name"></label>
+                <label><span data-i18n="crm.form.rank"></span><select name="rank" data-options="rank" data-blank="1"></select></label>
+              </div>
+              <div class="crm-row-2">
+                <label><span data-i18n="crm.form.department"></span><input name="department" data-i18n-placeholder="crm.form.departmentHint"></label>
+                <label><span data-i18n="crm.form.kakao"></span><input name="kakao"></label>
+              </div>
+              <div class="crm-row-2">
+                <label><span data-i18n="crm.form.phone"></span><input name="phone" placeholder="02-0000-0000"></label>
+                <label><span data-i18n="crm.form.mobile"></span><input name="mobile" placeholder="010-0000-0000"></label>
+              </div>
+              <label><span data-i18n="crm.form.email"></span><input name="email" type="email"></label>
+            </section>
+
+            <section class="crm-fieldset">
+              <h4 data-i18n="crm.form.sectionDeal"></h4>
+              <div class="crm-row-2">
+                <label><span data-i18n="crm.form.project"></span><select name="project_type" data-options="project" data-blank="1"></select></label>
+                <label><span data-i18n="crm.form.source"></span><select name="source" data-options="source"></select></label>
+              </div>
+              <label><span data-i18n="crm.form.tech"></span><input name="tech" data-i18n-placeholder="crm.form.techHint"></label>
+              <div class="crm-row-2">
+                <label><span data-i18n="crm.form.budget"></span><input name="budget" data-i18n-placeholder="crm.form.budgetHint"></label>
+                <label><span data-i18n="crm.form.teamSize"></span><input name="team_size" type="number" min="0" inputmode="numeric"></label>
+              </div>
+              <div class="crm-row-2">
+                <label><span data-i18n="crm.form.expectedStart"></span><input name="expected_start" type="month"></label>
+                <label class="crm-check"><input name="bridge_se" type="checkbox"><span data-i18n="crm.form.bridgeSe"></span></label>
+              </div>
+            </section>
+
+            <section class="crm-fieldset">
+              <h4 data-i18n="crm.form.sectionSales"></h4>
+              <div class="crm-row-2">
+                <label><span data-i18n="crm.form.status"></span><select name="status" data-options="status"></select></label>
+                <label><span data-i18n="crm.form.assignee"></span><input name="assignee" list="crm-assignee-list"></label>
+              </div>
+              <label id="lost-reason-row" class="hidden"><span data-i18n="crm.form.lostReason"></span><select name="lost_reason" data-options="lost" data-blank="1"></select></label>
+              <div class="crm-row-2">
+                <label><span data-i18n="crm.form.nextAction"></span><input name="next_action" data-i18n-placeholder="crm.form.nextActionHint"></label>
+                <label><span data-i18n="crm.form.nextDate"></span><input name="next_date" type="date"></label>
+              </div>
+              <label><span data-i18n="crm.form.memo"></span><textarea name="memo" rows="3"></textarea></label>
+            </section>
+          </div>
+
+          <datalist id="crm-assignee-list"></datalist>
+
+          <div id="lead-error" class="hidden crm-form-error"></div>
+
+          <div class="crm-modal-foot">
+            <div class="flex items-center gap-2">
+              <button type="button" id="lead-delete" class="crm-btn crm-btn-danger hidden"><span data-icon="trash" data-size="14"></span> <span data-i18n="crm.form.delete"></span></button>
+              <a id="lead-scan-link" class="crm-link hidden" target="_blank" rel="noopener"><span data-icon="search" data-size="13"></span> <span data-i18n="crm.form.fromScanner"></span></a>
+              <a id="lead-naver-link" class="crm-link hidden" target="_blank" rel="noopener noreferrer"><span data-icon="external" data-size="13"></span> <span data-i18n="crm.form.naver"></span></a>
+            </div>
+            <div class="flex items-center gap-2">
+              <button type="button" class="crm-btn" data-close="lead-modal" data-i18n="crm.form.cancel"></button>
+              <button type="submit" id="lead-save" class="crm-btn crm-btn-primary" data-i18n="crm.form.save"></button>
+            </div>
+          </div>
+        </form>
+
+        <!-- Nhật ký hoạt động: chỉ khi sửa lead đã có -->
+        <section id="lead-activities" class="hidden crm-activities">
+          <div class="crm-activities-head">
+            <h4 data-i18n="crm.activity.heading"></h4>
+            <span id="lead-last-contact" class="text-[12px] text-slate-500"></span>
+          </div>
+          <form id="activity-form" class="crm-activity-form">
+            <select name="type" class="crm-select crm-select-sm" data-options="activity"></select>
+            <input name="at" type="date" class="crm-select crm-select-sm">
+            <input name="note" data-i18n-placeholder="crm.activity.notePlaceholder">
+            <button type="submit" class="crm-btn crm-btn-primary crm-btn-sm" data-i18n="crm.activity.add"></button>
+          </form>
+          <ul id="activity-list" class="crm-activity-list"></ul>
+        </section>
+      </div>
+    </div>
+
+    <!-- Modal nhập file -->
+    <div id="import-modal" class="hidden crm-overlay">
+      <div class="crm-modal">
+        <div class="crm-modal-head">
+          <h3 class="text-[16px] font-bold" data-i18n="crm.import.title"></h3>
+          <button type="button" class="crm-icon-btn" data-close="import-modal" aria-label="close"><span data-icon="x" data-size="18"></span></button>
+        </div>
+        <label id="import-drop" class="crm-drop">
+          <span data-icon="upload" data-size="28"></span>
+          <span class="text-[13px] text-slate-600 mt-2" data-i18n="crm.import.drop"></span>
+          <span class="text-[11px] text-slate-400 mt-1" data-i18n="crm.import.hint"></span>
+          <input id="import-file" type="file" accept=".csv,.json,text/csv,application/json" class="hidden">
+        </label>
+        <div class="flex items-center justify-between mt-3">
+          <a href="/api/leads/sample.csv" class="crm-link"><span data-icon="sheet" data-size="13"></span> <span data-i18n="crm.import.sample"></span></a>
+          <span id="import-filename" class="text-[12px] text-slate-500"></span>
+        </div>
+        <div id="import-preview" class="hidden mt-4">
+          <div class="crm-import-stats" id="import-stats"></div>
+          <div class="saved-wrap crm-import-table-wrap">
+            <table class="crm-table crm-table-compact">
+              <thead><tr>
+                <th data-i18n="crm.form.company"></th><th data-i18n="crm.form.contactName"></th><th data-i18n="crm.form.rank"></th>
+                <th data-i18n="crm.form.phone"></th><th data-i18n="crm.form.email"></th><th data-i18n="crm.form.source"></th><th data-i18n="crm.form.budget"></th>
+              </tr></thead>
+              <tbody id="import-rows"></tbody>
+            </table>
+          </div>
+          <ul id="import-errors" class="crm-import-errors"></ul>
+        </div>
+        <div id="import-error" class="hidden crm-form-error mt-3"></div>
+        <div class="crm-modal-foot">
+          <span></span>
+          <div class="flex items-center gap-2">
+            <button type="button" class="crm-btn" data-close="import-modal" data-i18n="crm.form.cancel"></button>
+            <button type="button" id="import-commit" class="crm-btn crm-btn-primary" disabled></button>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <script src="/static/i18n.js"></script>
+  <script src="/static/app.js"></script>
+  <script src="/static/crm.js"></script>
+</body>
+</html>

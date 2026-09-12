@@ -11,7 +11,9 @@ URL을 입력하면 앱이 실제로 해당 웹사이트에 접속해 회사 소
 ## 기능 소개
 
 아래 이미지는 앱의 실제 화면이며, 데이터는 `scatterlab.co.kr`을 실제로 스캔한
-결과입니다. `python backend/take_screenshots.py`로 다시 캡처할 수 있습니다.
+결과입니다. CRM 이미지(12–15)는 실제 스캔한 기업에서 만든 리드이며, 예산·상태·일정은
+파이프라인 설명을 위해 영업 담당자가 직접 입력한 값입니다.
+`python backend/take_screenshots.py`로 다시 캡처할 수 있습니다.
 
 ### 1. URL 입력, 실제 웹사이트 스캔
 
@@ -100,6 +102,55 @@ IT/소프트웨어 직무만 최대 10건 수집하며 영업, 회계, 인사는
 보여줍니다. `localhost`나 사설 IP 같은 내부 주소는 처음부터 차단하여 앱이 내부망
 스캔에 악용되지 않도록 합니다.
 
+### 12. CRM 리드 — 한국 시장용 영업 파이프라인
+
+![CRM 리드](docs/screenshots/12-crm-table.png)
+
+`/crm` 페이지는 스캔 이후 리드가 이어지는 곳입니다. 스캔 결과의 **CRM 리드로 추가**
+(또는 저장된 기업 페이지의 **리드** 버튼)를 누르면 기업명, 최상위 담당자, 직급,
+전화, 이메일, 채용 공고에서 뽑은 기술스택, IT 채용 신호가 채워진 리드가 바로
+만들어집니다 — 다시 입력할 필요가 없습니다. KPI 네 칸: 총 파이프라인(₩ 억), 수주율,
+이번 달 신규 리드, 연체 리드 수. HOT 80점 이상 / 연체 / 이번 주 일정 빠른 필터,
+상태·담당 영업 필터, 전체 항목 검색을 지원합니다.
+
+파이프라인은 한국 B2B 영업 주기를 따릅니다: 신규 → 접촉 → 미팅·니즈 파악 →
+제안·견적 → 협상·계약 검토 → 수주 / 실패 / 보류. **실패**로 바꿀 때는 사유(가격,
+일정, 경쟁사, 내부 개발, 예산 취소, 언어·소통 우려)를 반드시 선택해 나중에 어디서
+졌는지 알 수 있게 합니다.
+
+### 13. 한국 특화 항목과 근거 있는 점수
+
+![리드 상세](docs/screenshots/13-crm-lead.png)
+
+기본 정보 외에 사업자등록번호, 직급(사원 → 대표이사, CTO/CIO), 부서, 휴대폰 +
+카카오톡 ID, 기업 규모(대기업/중견/중소/스타트업/공공), 사업 유형(파견/도급/SI/SM/ODC),
+`1억 5000만`처럼 입력 가능한 KRW 예산, **필요 인원**, **발주 예정 시기**(연말 예산
+확정, 상·하반기 발주), **한국어 브릿지 SE 필요 여부**, 현재 협력사·경쟁사, 담당 영업,
+다음 액션과 날짜가 있습니다. 리드 점수 0–100은 명확한 규칙(IT 채용, 의사결정 직급,
+이메일/전화/카카오톡 확보, 예산, 유입경로, 발주 임박, 팀 단위 수요)으로 계산하고
+**산출 근거**를 바로 보여줍니다 — 무작위 숫자가 없습니다. 아래 **활동 기록**(전화,
+이메일, 카카오톡, 미팅, 제안서/견적서 발송)에 한 줄 남기면 마지막 접촉일이 자동
+갱신됩니다.
+
+### 14. 드래그 앤 드롭 칸반
+
+![칸반](docs/screenshots/14-crm-kanban.png)
+
+같은 데이터를 상태별 열로 봅니다. 카드를 다른 열로 끌면 상태가 바뀌고 즉시
+저장되며, 연체 카드는 빨간 표시가 붙습니다. 테이블에서는 여러 리드를 선택해 상태를
+일괄 변경하거나 삭제할 수 있습니다.
+
+### 15. 한국어 Excel 가져오기, Excel / JSON 내보내기
+
+![파일 가져오기](docs/screenshots/15-crm-import.png)
+
+CSV/JSON을 끌어다 놓으면 한국어 Excel이 기본으로 저장하는 **CP949** CSV도 깨지지
+않고 읽고, 한국어/베트남어/영어 열 이름(회사명, 담당자명, 직급, 휴대폰, 예산,
+발주예정…)을 인식하며, 직급 / 유입경로 / 상태를 표준 코드로 변환합니다. 저장 전에
+유효 / 중복(이메일 또는 회사+담당자 기준) / 오류 건수를 **미리보기**로 확인하고,
+샘플 CSV도 내려받을 수 있습니다. 현재 보이는 리드를 CSV(BOM 포함, Excel에서 바로
+열림) 또는 JSON으로 내보냅니다.
+
 ## 언어
 
 기본 언어는 **한국어**입니다. 헤더 오른쪽 버튼으로 한국어 ↔ Tiếng Việt를 즉시 전환할
@@ -185,7 +236,8 @@ backend/app/security.py    URL 검사, localhost / 사설 IP / 메타데이터 I
 backend/app/crawler.py     실제 크롤링: fetch, 인코딩, 도메인 격리, Playwright
 backend/app/extractor.py   기업 / 주요 담당자 / IT 채용 정보 추출
 backend/app/storage.py     SQLite: 저장 / 목록 / 다시 열기 / 삭제
-backend/app/main.py        FastAPI: /api/scan, /api/scan/stream (SSE), /api/companies, 2개 페이지
+backend/app/crm.py         CRM: 리드, 점수 계산, CSV/JSON(CP949) 가져오기, 활동 기록
+backend/app/main.py        FastAPI: /api/scan, /api/scan/stream (SSE), /api/companies, /api/leads, 3개 페이지
 start.py                   실행기: 환경 확인, 포트 선택, 브라우저 열기
 backend/scan_cli.py        터미널에서 스캔
 backend/test_scanner.py    오프라인 테스트
@@ -193,24 +245,27 @@ backend/check_i18n.py      번역 검사
 backend/take_screenshots.py README용 실제 화면 캡처 (Playwright)
 frontend/index.html        "새 스캔" 페이지 (프로토타입 레이아웃 유지)
 frontend/saved.html        "저장된 기업" 페이지
+frontend/crm.html          "CRM 리드" 페이지
 frontend/i18n.js           한국어/베트남어 사전, 언어 전환
-frontend/app.js            두 페이지 공용: API 호출, 결과 렌더링, 내보내기, 목록
+frontend/app.js            세 페이지 공용: API 호출, 결과 렌더링, 내보내기, 목록
+frontend/crm.js            CRM 페이지: KPI, 테이블, 칸반, 리드 폼, 파일 가져오기/내보내기
 frontend/tailwind.css      프로토타입에서 그대로 가져온 컴파일 CSS
-frontend/app.css           프로토타입에 없던 클래스 보완 (IT 채용 색상, 오류, 언어 버튼)
+frontend/app.css           프로토타입에 없던 클래스 보완 (IT 채용 색상, 오류, 언어 버튼, CRM 전체)
 ```
 
 `Company-Scanner-Prototype-Ui (1).html`은 UI 참고용으로 남겨둔 파일이며 앱은 사용하지 않습니다.
 
-## 두 개의 페이지
+## 세 개의 페이지
 
-헤더 오른쪽에 두 페이지 이동 버튼이 항상 표시됩니다.
+헤더 오른쪽에 세 페이지 이동 버튼이 항상 표시됩니다.
 
 | 페이지 | URL | 내용 |
 |---|---|---|
 | 새 스캔 | `/` | URL 입력, 스캔, 결과 확인, 데이터베이스 저장 |
 | 저장된 기업 | `/saved` | 데이터베이스에 저장된 전체 기업 목록 |
+| CRM 리드 | `/crm` | 영업 파이프라인: 리드, 점수, 활동, 가져오기/내보내기 |
 
-"저장된 기업" 버튼의 숫자는 현재 저장된 기업 수입니다.
+"저장된 기업" 버튼의 숫자는 현재 저장된 기업 수, "CRM 리드"의 숫자는 리드 수입니다.
 
 ## 데이터베이스 저장
 
@@ -290,6 +345,22 @@ frontend/app.css           프로토타입에 없던 클래스 보완 (IT 채용
 | GET | `/api/companies?full=1` | 위와 동일 + 전체 스캔 결과(JSON 내보내기용) |
 | GET | `/api/companies/{id}` | 요약 + 저장된 전체 스캔 결과 |
 | DELETE | `/api/companies/{id}` | 기업 한 건 삭제 |
+
+CRM:
+
+| Method | Endpoint | 역할 |
+|---|---|---|
+| GET | `/api/leads` | 전체 리드, 최근 업데이트 순 (`overdue` 포함) |
+| POST | `/api/leads` | 리드 생성 (body `{"lead": {...}}`), 서버가 정규화·점수 계산 |
+| GET | `/api/leads/{id}` | 리드 + `score_breakdown` + `activities` |
+| PUT | `/api/leads/{id}` | 부분 수정 (바뀐 항목만 전송), 점수 재계산 |
+| DELETE | `/api/leads/{id}` | 리드 삭제 (활동 기록도 함께 삭제) |
+| POST | `/api/leads/delete` | 일괄 삭제: body `{"ids": [...]}` |
+| POST | `/api/leads/from-company/{company_id}` | 스캔한 기업에서 리드 생성; 이미 있으면 기존 리드 반환 |
+| POST | `/api/leads/import` | Body `{"filename", "content_base64", "commit"}`; `commit=false`는 미리보기만 |
+| GET | `/api/leads/sample.csv` | 가져오기가 인식하는 열로 된 샘플 CSV |
+| POST | `/api/leads/{id}/activities` | 활동 기록 `{"activity": {"type", "at", "note"}}`, 마지막 접촉일 갱신 |
+| DELETE | `/api/activities/{id}` | 활동 한 건 삭제 |
 
 ## 크롤링 제한
 

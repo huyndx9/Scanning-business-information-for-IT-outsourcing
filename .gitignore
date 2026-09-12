@@ -16,3 +16,6 @@ venv/
 Thumbs.db
 .idea/
 .vscode/
+
+# Claude desktop preview config
+.claude/

@@ -302,6 +302,124 @@ try:
 except ValueError:
     check("result without a domain is rejected", True)
 
+# -- CRM (lead, cham diem, nhap file) ---------------------------------------
+
+print("crm")
+import base64  # noqa: E402
+
+from backend.app import crm  # noqa: E402
+
+check("rank: CTO in mixed title", crm.normalize_rank("부사장 겸 CTO") == "cto")
+check("rank: 대표이사", crm.normalize_rank("대표이사") == "ceo")
+check("rank: english director", crm.normalize_rank("Director of Engineering") == "director")
+check("rank: unknown -> other", crm.normalize_rank("담당") == "other")
+check("rank: empty -> None", crm.normalize_rank("") is None)
+
+check("budget: 억/만 mix", crm.normalize_budget("₩ 1억 5000만") == 150_000_000)
+check("budget: decimal 억", crm.normalize_budget("2.5억") == 250_000_000)
+check("budget: plain with commas", crm.normalize_budget("150,000,000") == 150_000_000)
+check("budget: garbage -> None", crm.normalize_budget("abc") is None)
+
+check("phone: +82 to domestic", crm.normalize_phone("+82-2-1234-5678") == "02-1234-5678")
+check("phone: mobile digits", crm.normalize_phone("01012345678") == "010-1234-5678")
+check("phone: service number untouched", crm.normalize_phone("1588-1234") == "1588-1234")
+check("biz number formatted", crm.normalize_biz_number("1208112345") == "120-81-12345")
+check("year-month: korean", crm._year_month("2026년 11월") == "2026-11")
+check("year-month: full date", crm._year_month("2026-11-05") == "2026-11")
+check("year-month: invalid", crm._year_month("11월") is None)
+
+# Cham diem: cong don theo quy tac, HOT >= 80
+strong = crm.normalize_lead({
+    "company_name": "A", "rank": "CTO", "email": "cto@a.co.kr", "mobile": "010-1111-2222",
+    "kakao": "cto_a", "budget": "3억", "source": "referral", "project_type": "odc",
+    "biz_number": "123-45-67890", "it_hiring": "High", "team_size": 5,
+})
+check("strong lead scores 100", strong["score"] == 100, f"-> {strong['score']}")
+weak = crm.normalize_lead({"company_name": "B"})
+check("bare lead scores 0", weak["score"] == 0, f"-> {weak['score']}")
+mid = crm.normalize_lead({"company_name": "C", "rank": "부장", "email": "x@c.kr", "it_hiring": "Medium"})
+check("mid lead adds up", mid["score"] == 12 + 10 + 15, f"-> {mid['score']}")
+check("breakdown keys match score", sum(p["points"] for p in crm.score_breakdown(mid)) == mid["score"])
+check("lost reason cleared when not lost",
+      crm.normalize_lead({"company_name": "D", "status": "won", "lost_reason": "price"})["lost_reason"] is None)
+check("lost reason kept when lost",
+      crm.normalize_lead({"company_name": "D", "status": "lost", "lost_reason": "price"})["lost_reason"] == "price")
+
+try:
+    crm.normalize_lead({"contact_name": "no company"})
+    check("company name required", False)
+except crm.LeadError as exc:
+    check("company name required", str(exc) == "company_required")
+try:
+    crm.normalize_lead({"company_name": "E", "email": "not-an-email"})
+    check("email validated", False)
+except crm.LeadError as exc:
+    check("email validated", str(exc) == "email_invalid")
+
+# Tu ket qua scan -> lead dien san
+scan_lead = crm.lead_from_company({"id": 7, "domain": "test.co.kr", "result": result, "it_hiring": "Medium"})
+check("lead from scan: company", scan_lead["company_name"] == result["company"]["name"])
+check("lead from scan: first contact", scan_lead["contact_name"] == result["key_contacts"][0]["name"])
+check("lead from scan: source scanner", scan_lead["source"] == "scanner")
+check("lead from scan: links company", scan_lead["company_id"] == 7)
+check("tech from jobs", "Java" in crm.tech_from_jobs([{"title": "Java 백엔드 개발자", "description": ""}]))
+check("tech word boundary", "Go" not in crm.tech_from_jobs([{"title": "Google Ads Manager", "description": ""}]))
+
+# CRUD tren DB test
+crm.init_db()
+created = crm.create_lead({"company_name": "쿠팡", "contact_name": "김민수", "rank": "과장",
+                           "email": "Minsu@Coupang.com", "budget": "4500만", "status": "new"})
+check("create lead", created["id"] > 0 and created["email"] == "minsu@coupang.com")
+check("list leads", len(crm.list_leads()) == 1)
+updated = crm.update_lead(created["id"], {"status": "meeting", "next_date": "2020-01-01"})
+check("update keeps other fields", updated["contact_name"] == "김민수" and updated["status"] == "meeting")
+check("overdue computed", updated["overdue"] is True)
+check("update unknown id -> None", crm.update_lead(999999, {"status": "won"}) is None)
+
+activity = crm.add_activity(created["id"], {"type": "call", "note": "통화", "at": "2026-09-10"})
+check("activity added", activity["type"] == "call")
+check("activity updates last_contact", crm.get_lead(created["id"])["last_contact"] == "2026-09-10")
+check("activities listed", len(crm.list_activities(created["id"])) == 1)
+check("find lead by domain", crm.find_lead_for_company(None, None) is None)
+
+# Nhap CSV tieng Han ma hoa CP949 (Excel Han) voi 1 dong trung email
+csv_text = (
+    "회사명,담당자명,직급,전화,이메일,유입경로,예산,상태,발주예정\n"
+    "토스,이지은,부장,010-9876-5432,jieun@toss.im,전시회,2.5억,미팅,2026-11\n"
+    "쿠팡,김민수,과장,010-1234-5678,minsu@coupang.com,소개,45000000,신규,\n"
+    ",없음,,,,,,,\n"
+)
+payload = base64.b64encode(csv_text.encode("cp949")).decode()
+preview = crm.import_leads("leads.csv", payload, commit=False)
+check("import preview: total rows", preview["total"] == 3, f"-> {preview}")
+check("import preview: valid", preview["valid"] == 1)
+check("import preview: duplicate by email", preview["duplicates"] == 1)
+check("import preview: error row", len(preview["errors"]) == 1 and preview["errors"][0]["code"] == "company_required")
+check("import preview: CP949 decoded", preview["preview"][0]["company_name"] == "토스")
+check("import preview: korean status/source mapped", preview["preview"][0]["source"] == "exhibition")
+check("import preview: nothing written", len(crm.list_leads()) == 1)
+done = crm.import_leads("leads.csv", payload, commit=True)
+check("import commit inserts", done["inserted"] == 1 and len(crm.list_leads()) == 2)
+imported = next(lead for lead in crm.list_leads() if lead["company_name"] == "토스")
+check("import: budget parsed", imported["budget"] == 250_000_000)
+check("import: status mapped", imported["status"] == "meeting")
+check("import: expected_start", imported["expected_start"] == "2026-11")
+
+json_payload = base64.b64encode(b'[{"company": "LG CNS", "contact": "Park", "tech_stack": "MSA|AWS"}]').decode()
+done = crm.import_leads("leads.json", json_payload, commit=True)
+check("import json", done["inserted"] == 1)
+check("import json: tech split", crm.list_leads()[0]["tech"] == ["MSA", "AWS"])
+
+try:
+    crm.import_leads("x.json", base64.b64encode(b"{bad").decode(), commit=False)
+    check("bad json rejected", False)
+except crm.LeadError as exc:
+    check("bad json rejected", str(exc) == "file_invalid")
+
+check("delete leads (cascade activities)", crm.delete_leads([created["id"]]) == 1)
+check("activities gone with lead", crm.list_activities(created["id"]) == [])
+check("sample csv has BOM + korean headers", crm.sample_csv().startswith("\ufeff회사명"))
+
 for suffix in ("", "-wal", "-shm"):
     stale = _Path(str(storage.DB_PATH) + suffix)
     if stale.exists():

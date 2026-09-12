@@ -3,6 +3,8 @@
 POST /api/scan            -> crawl + extract, returns the result JSON
 GET  /api/scan/stream     -> same work, streaming real progress over SSE
 GET  /                    -> the scanner UI (frontend/index.html)
+GET  /saved               -> saved companies
+GET  /crm                 -> CRM leads (frontend/crm.html), API under /api/leads
 """
 from __future__ import annotations
 
@@ -12,10 +14,11 @@ import os
 from pathlib import Path
 
 from fastapi import FastAPI
-from fastapi.responses import FileResponse, JSONResponse, StreamingResponse
+from fastapi.responses import FileResponse, JSONResponse, PlainTextResponse, StreamingResponse
 from fastapi.staticfiles import StaticFiles
 from pydantic import BaseModel
 
+from . import crm
 from .crawler import Crawler, CrawlError
 from .extractor import build_result
 from .security import DomainNotResolved, UrlNotAllowed, normalize_input_url, validate_url
@@ -195,9 +198,132 @@ def company_delete(company_id: int) -> JSONResponse:
     return JSONResponse(content={"deleted": company_id})
 
 
+# -- CRM: lead ----------------------------------------------------------------
+
+
+class LeadPayload(BaseModel):
+    lead: dict
+
+
+class LeadIdsPayload(BaseModel):
+    ids: list[int]
+
+
+class ImportPayload(BaseModel):
+    filename: str
+    content_base64: str
+    commit: bool = False
+
+
+class ActivityPayload(BaseModel):
+    activity: dict
+
+
+def _lead_error(exc: Exception, status: int = 400) -> JSONResponse:
+    return JSONResponse(status_code=status, content={"error": {"code": str(exc) or "invalid", "message": str(exc)}})
+
+
+@app.get("/api/leads")
+def leads() -> JSONResponse:
+    return JSONResponse(content={"leads": crm.list_leads()})
+
+
+@app.post("/api/leads")
+def lead_create(payload: LeadPayload) -> JSONResponse:
+    try:
+        return JSONResponse(content=crm.create_lead(payload.lead))
+    except crm.LeadError as exc:
+        return _lead_error(exc)
+
+
+@app.get("/api/leads/sample.csv")
+def lead_sample_csv() -> PlainTextResponse:
+    """CSV mau dung cac cot ma 'Nhap tu file' hieu."""
+    return PlainTextResponse(
+        crm.sample_csv(),
+        media_type="text/csv; charset=utf-8",
+        headers={"Content-Disposition": 'attachment; filename="leads_sample.csv"'},
+    )
+
+
+@app.post("/api/leads/import")
+def lead_import(payload: ImportPayload) -> JSONResponse:
+    """commit=false: xem truoc (hop le / trung / loi). commit=true: ghi vao DB."""
+    try:
+        return JSONResponse(content=crm.import_leads(payload.filename, payload.content_base64, payload.commit))
+    except crm.LeadError as exc:
+        return _lead_error(exc)
+
+
+@app.post("/api/leads/delete")
+def lead_delete_many(payload: LeadIdsPayload) -> JSONResponse:
+    return JSONResponse(content={"deleted": crm.delete_leads(payload.ids)})
+
+
+@app.post("/api/leads/from-company/{company_id}")
+def lead_from_company(company_id: int) -> JSONResponse:
+    """Tao lead tu cong ty da quet. Da co lead cho cong ty nay thi tra ve lead do."""
+    saved = get_company(company_id)
+    if saved is None:
+        return JSONResponse(status_code=404, content={"error": {"code": "not_found", "message": "Not found."}})
+    existing = crm.find_lead_for_company(company_id, saved.get("domain"))
+    if existing:
+        return JSONResponse(content={"lead": existing, "created": False})
+    try:
+        lead = crm.create_lead(crm.lead_from_company(saved))
+    except crm.LeadError as exc:
+        return _lead_error(exc)
+    return JSONResponse(content={"lead": lead, "created": True})
+
+
+@app.get("/api/leads/{lead_id}")
+def lead_detail(lead_id: int) -> JSONResponse:
+    lead = crm.get_lead(lead_id)
+    if lead is None:
+        return JSONResponse(status_code=404, content={"error": {"code": "not_found", "message": "Not found."}})
+    lead["score_breakdown"] = crm.score_breakdown(lead)
+    lead["activities"] = crm.list_activities(lead_id)
+    return JSONResponse(content=lead)
+
+
+@app.put("/api/leads/{lead_id}")
+def lead_update(lead_id: int, payload: LeadPayload) -> JSONResponse:
+    try:
+        lead = crm.update_lead(lead_id, payload.lead)
+    except crm.LeadError as exc:
+        return _lead_error(exc)
+    if lead is None:
+        return JSONResponse(status_code=404, content={"error": {"code": "not_found", "message": "Not found."}})
+    lead["score_breakdown"] = crm.score_breakdown(lead)
+    return JSONResponse(content=lead)
+
+
+@app.delete("/api/leads/{lead_id}")
+def lead_delete(lead_id: int) -> JSONResponse:
+    if not crm.delete_leads([lead_id]):
+        return JSONResponse(status_code=404, content={"error": {"code": "not_found", "message": "Not found."}})
+    return JSONResponse(content={"deleted": lead_id})
+
+
+@app.post("/api/leads/{lead_id}/activities")
+def lead_activity_add(lead_id: int, payload: ActivityPayload) -> JSONResponse:
+    activity = crm.add_activity(lead_id, payload.activity)
+    if activity is None:
+        return JSONResponse(status_code=404, content={"error": {"code": "not_found", "message": "Not found."}})
+    return JSONResponse(content=activity)
+
+
+@app.delete("/api/activities/{activity_id}")
+def activity_delete(activity_id: int) -> JSONResponse:
+    if not crm.delete_activity(activity_id):
+        return JSONResponse(status_code=404, content={"error": {"code": "not_found", "message": "Not found."}})
+    return JSONResponse(content={"deleted": activity_id})
+
+
 @app.on_event("startup")
 def _startup() -> None:
     init_db()
+    crm.init_db()
 
 
 @app.get("/api/health")
@@ -215,6 +341,12 @@ async def index() -> FileResponse:
 async def saved_page() -> FileResponse:
     """Trang danh sách công ty đã lưu."""
     return _page("saved.html")
+
+
+@app.get("/crm")
+async def crm_page() -> FileResponse:
+    """Trang CRM: lead, pipeline, hoạt động."""
+    return _page("crm.html")
 
 
 app.mount("/static", NoCacheStaticFiles(directory=str(FRONTEND_DIR)), name="static")

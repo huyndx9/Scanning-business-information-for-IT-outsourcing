@@ -60,7 +60,9 @@ async def main() -> int:
     OUT.mkdir(parents=True, exist_ok=True)
 
     async with async_playwright() as pw:
-        browser = await pw.chromium.launch()
+        # --lang: ô chọn ngày/tháng của Chromium hiển thị theo ngôn ngữ trình duyệt,
+        # không theo `locale` của context, nên phải đặt ở đây để không lẫn tiếng Việt.
+        browser = await pw.chromium.launch(args=["--lang=ko-KR"])
         context = await browser.new_context(
             viewport={"width": 1280, "height": 800},
             device_scale_factor=2,
@@ -127,6 +129,42 @@ async def main() -> int:
         await page.click("#scan-btn")
         await page.wait_for_selector("#error-box:not(.hidden)", timeout=15000)
         await shot_full_clip(page, "11-error.png", ["#error-box"])
+
+        # -- 12-15. CRM ----------------------------------------------------------------
+        # Lead trong DB: tạo từ các công ty đã quét (nút "CRM 리드로 추가"), phần
+        # sales (ngân sách, trạng thái, lịch) nhập tay. Không có lead thì bỏ qua.
+        await page.goto(BASE + "/crm")
+        await page.wait_for_load_state("networkidle")
+        if await page.locator("#crm-rows tr").count() > 0:
+            await shot_viewport(page, "12-crm-table.png")
+
+            # Modal cao hơn viewport và nằm trên lớp phủ cố định, nên nới viewport
+            # rồi chụp riêng phần tử thay vì cắt từ ảnh full-page.
+            await page.set_viewport_size({"width": 1280, "height": 1900})
+            await page.locator("#crm-rows tr").first.click()
+            await page.wait_for_selector("#lead-modal:not(.hidden)")
+            await page.wait_for_timeout(300)
+            await page.locator("#lead-modal .crm-modal").screenshot(path=str(OUT / "13-crm-lead.png"))
+            print("  13-crm-lead.png")
+            await page.keyboard.press("Escape")
+            await page.set_viewport_size({"width": 1280, "height": 800})
+
+            await page.click("[data-view='kanban']")
+            await page.wait_for_timeout(300)
+            await shot_full_clip(page, "14-crm-kanban.png", ["#crm-kpis", "#crm-kanban"])
+            await page.click("[data-view='table']")
+
+            # Xem trước nhập file: dùng chính CSV mẫu app cung cấp, không ghi vào DB.
+            await page.click("#crm-import-btn")
+            sample = await page.evaluate("fetch('/api/leads/sample.csv').then(r => r.text())")
+            await page.set_input_files("#import-file", {
+                "name": "leads_sample.csv", "mimeType": "text/csv", "buffer": sample.encode("utf-8"),
+            })
+            await page.wait_for_selector("#import-preview:not(.hidden)")
+            await page.wait_for_timeout(300)
+            await page.locator("#import-modal .crm-modal").screenshot(path=str(OUT / "15-crm-import.png"))
+            print("  15-crm-import.png")
+            await page.keyboard.press("Escape")
 
         await browser.close()
 

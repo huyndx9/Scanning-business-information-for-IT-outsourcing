@@ -1,6 +1,7 @@
-/* Company Scanner UI — dùng chung cho 2 trang:
+/* Company Scanner UI — dùng chung cho 3 trang:
      /        quét mới + hiển thị kết quả
      /saved   danh sách công ty đã lưu
+     /crm     CRM lead (phần riêng nằm trong crm.js, dùng lại helper ở đây)
 
    Mọi giá trị hiển thị đều đến từ /api/scan của đúng URL người dùng nhập,
    hoặc từ bản đã lưu trong database. Không có dữ liệu mẫu / mặc định /
@@ -34,6 +35,11 @@ const ICONS = {
   mail: '<rect width="20" height="16" x="2" y="4" rx="2"/><path d="m22 7-8.97 5.7a1.94 1.94 0 0 1-2.06 0L2 7"/>',
   database: '<ellipse cx="12" cy="5" rx="9" ry="3"/><path d="M3 5V19A9 3 0 0 0 21 19V5"/><path d="M3 12A9 3 0 0 0 21 12"/>',
   save: '<path d="M15.2 3a2 2 0 0 1 1.4.6l3.8 3.8a2 2 0 0 1 .6 1.4V19a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2z"/><path d="M17 21v-7a1 1 0 0 0-1-1H8a1 1 0 0 0-1 1v7"/><path d="M7 3v4a1 1 0 0 0 1 1h7"/>',
+  upload: '<path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="17 8 12 3 7 8"/><line x1="12" x2="12" y1="3" y2="15"/>',
+  plus: '<path d="M5 12h14"/><path d="M12 5v14"/>',
+  x: '<path d="M18 6 6 18"/><path d="m6 6 12 12"/>',
+  trash: '<path d="M3 6h18"/><path d="M19 6v14c0 1-1 2-2 2H7c-1 0-2-1-2-2V6"/><path d="M8 6V4c0-1 1-2 2-2h4c1 0 2 1 2 2v2"/>',
+  userplus: '<path d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><line x1="19" x2="19" y1="8" y2="14"/><line x1="22" x2="16" y1="11" y2="11"/>',
 };
 
 function icon(name, size = 16, className = "") {
@@ -68,11 +74,50 @@ document.querySelectorAll("[data-icon]").forEach((element) => {
   element.innerHTML = icon(element.dataset.icon, Number(element.dataset.size || 16));
 });
 
-/* Số công ty trên nút điều hướng, hiện ở cả hai trang. */
+/* Số công ty / số lead trên nút điều hướng, hiện ở mọi trang. */
 const navBadge = document.getElementById("nav-saved-count");
+const navCrmBadge = document.getElementById("nav-crm-count");
 
 function setNavBadge(count) {
   if (navBadge) navBadge.textContent = String(count);
+}
+
+function setNavCrmBadge(count) {
+  if (navCrmBadge) navCrmBadge.textContent = String(count);
+}
+
+async function refreshNavCrmBadge() {
+  if (!navCrmBadge) return;
+  try {
+    const response = await fetch("/api/leads");
+    if (!response.ok) return;
+    setNavCrmBadge(((await response.json()).leads || []).length);
+  } catch (_) {
+    // Không lấy được số lead thì badge giữ 0.
+  }
+}
+refreshNavCrmBadge();
+
+/* Trang không tự tải danh sách công ty (như /crm) vẫn cần số trên tab "Công ty đã lưu". */
+async function refreshNavSavedBadge() {
+  if (!navBadge || document.getElementById("url-input") || document.getElementById("saved-rows")) return;
+  try {
+    const response = await fetch("/api/companies");
+    if (!response.ok) return;
+    setNavBadge(((await response.json()).companies || []).length);
+  } catch (_) {
+    // Badge giữ 0.
+  }
+}
+refreshNavSavedBadge();
+
+/* Chuyển một công ty đã lưu thành lead CRM rồi mở lead đó.
+   Đã có lead cho công ty này thì mở lead cũ, không tạo bản trùng. */
+async function openAsLead(companyId) {
+  const response = await fetch(`/api/leads/from-company/${encodeURIComponent(companyId)}`, { method: "POST" });
+  if (!response.ok) throw new Error(String(response.status));
+  const payload = await response.json();
+  window.location.href = `/crm?lead=${payload.lead.id}`;
 }
 
 function download(blob, filename) {
@@ -119,6 +164,7 @@ if (isScanPage) {
   let result = null;          // kết quả thật của lần quét hiện tại, hoặc null
   let showJson = false;
   let saveState = "idle";     // idle | saving | saved | error
+  let savedCompanyId = null;  // id trong database sau khi lưu / khi mở từ trang đã lưu
   let stageState = [];
   let eventSource = null;
 
@@ -337,6 +383,9 @@ if (isScanPage) {
         <button id="json-btn" class="h-9 px-3.5 rounded-full border text-[13px] font-medium flex items-center gap-1.5 transition-colors ${showJson ? "bg-slate-900 text-white border-slate-900" : "bg-white border-slate-200 hover:bg-slate-50"}">
           ${icon("json", 16)} ${esc(showJson ? t("result.json.hide") : t("result.json.show"))}
         </button>
+        <button id="lead-btn" class="h-9 px-3.5 rounded-full bg-blue-600 hover:bg-blue-700 text-white text-[13px] font-semibold flex items-center gap-1.5 shadow-sm">
+          ${icon("userplus", 16)} ${esc(t("crm.lead.addFromScan"))}
+        </button>
       </div>
     </div>`;
 
@@ -368,6 +417,23 @@ if (isScanPage) {
 
     const copyBtn = document.getElementById("copy-json");
     if (copyBtn) copyBtn.onclick = () => navigator.clipboard.writeText(json);
+
+    const leadBtn = document.getElementById("lead-btn");
+    if (leadBtn) leadBtn.onclick = addLeadFromResult;
+  }
+
+  /* Lưu (nếu chưa) rồi chuyển sang CRM với lead điền sẵn từ kết quả quét. */
+  async function addLeadFromResult() {
+    if (!result) return;
+    try {
+      if (savedCompanyId === null) {
+        await saveCurrentResult();
+        if (savedCompanyId === null) return;   // lưu thất bại, lỗi đã hiện
+      }
+      await openAsLead(savedCompanyId);
+    } catch (_) {
+      showError(t("crm.error.saveFailed"), "");
+    }
   }
 
   // -- Lưu vào database ---------------------------------------------------
@@ -394,6 +460,7 @@ if (isScanPage) {
         body: JSON.stringify({ result }),
       });
       if (!response.ok) throw new Error(String(response.status));
+      savedCompanyId = (await response.json()).id;
       saveState = "saved";
       refreshNavBadge();
     } catch (_) {
@@ -411,6 +478,7 @@ if (isScanPage) {
       const saved = await response.json();
       if (!saved.result) throw new Error("empty");
       result = saved.result;
+      savedCompanyId = saved.id;
       saveState = "saved";     // đang xem đúng bản nằm trong database
       urlInput.value = "";     // sẵn sàng cho lần quét sau
       setScanning(false);
@@ -430,6 +498,7 @@ if (isScanPage) {
     result = null;
     showJson = false;
     saveState = "idle";
+    savedCompanyId = null;
     renderResults();
     stageState = STAGE_IDS.map((id, index) => ({ id, done: false, active: index === 0 }));
     setScanning(true);
@@ -581,6 +650,7 @@ if (isSavedPage) {
         <td>
           <div class="saved-actions">
             <button class="saved-btn" data-action="open" data-id="${company.id}">${esc(t("saved.action.view"))}</button>
+            <button class="saved-btn saved-btn-lead" data-action="lead" data-id="${company.id}" title="${esc(t("crm.lead.addFromScan"))}">${icon("userplus", 13)} ${esc(t("saved.action.lead"))}</button>
             <button class="saved-btn saved-btn-danger" data-action="delete" data-id="${company.id}">${esc(t("saved.action.delete"))}</button>
           </div>
         </td>
@@ -617,6 +687,8 @@ if (isSavedPage) {
     if (button.dataset.action === "open") {
       // Kết quả đầy đủ hiển thị ở trang quét.
       window.location.href = `/?company=${encodeURIComponent(id)}`;
+    } else if (button.dataset.action === "lead") {
+      openAsLead(id).catch(() => { savedCount.textContent = t("crm.error.saveFailed"); });
     } else {
       deleteSaved(id, button.closest("tr").querySelector(".saved-name").textContent.trim());
     }

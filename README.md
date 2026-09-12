@@ -11,7 +11,9 @@ mỗi URL là một lần scan độc lập, không tìm thấy thì trả `Not 
 ## Tính năng
 
 Ảnh dưới đây là ảnh chụp thật của app, dữ liệu là kết quả quét thật từ website
-`scatterlab.co.kr`. Chụp lại bằng `python backend/take_screenshots.py`.
+`scatterlab.co.kr`. Ảnh CRM (12–15) dùng lead tạo từ các công ty đã quét thật; phần
+ngân sách, trạng thái, lịch hẹn là dữ liệu sales nhập tay để minh hoạ pipeline.
+Chụp lại bằng `python backend/take_screenshots.py`.
 
 ### 1. Nhập URL, quét website thật
 
@@ -100,6 +102,55 @@ Website không truy cập được, timeout, bị chặn, URL không hợp lệ 
 thông báo riêng kèm mã lỗi. Địa chỉ nội bộ như `localhost` hay IP private bị chặn ngay
 từ đầu để app không thể bị lợi dụng quét mạng nội bộ.
 
+### 12. CRM lead — pipeline bán hàng cho thị trường Hàn
+
+![CRM lead](docs/screenshots/12-crm-table.png)
+
+Trang `/crm` là nơi lead đi tiếp sau khi quét. Bấm **CRM 리드로 추가** trên kết quả quét
+(hoặc nút **리드** ở trang công ty đã lưu) là có ngay một lead điền sẵn tên công ty,
+người liên hệ cao nhất, chức danh, điện thoại, email, tech stack lấy từ tin tuyển
+dụng và tín hiệu IT Hiring — không nhập lại tay. Bốn ô KPI: tổng pipeline (₩ 억),
+tỉ lệ thắng, lead mới tháng này, số lead quá hạn. Lọc nhanh HOT ≥ 80 điểm / quá hạn /
+lịch tuần này, lọc theo trạng thái và sales phụ trách, tìm theo mọi trường.
+
+Pipeline theo chu kỳ B2B Hàn Quốc: 신규 → 접촉 → 미팅·니즈 파악 → 제안·견적 →
+협상·계약 검토 → 수주 / 실패 / 보류. Chuyển sang **실패** bắt buộc chọn lý do
+(giá, tiến độ, đối thủ, tự phát triển, huỷ ngân sách, lo ngại ngôn ngữ) để sau này
+biết mình thua ở đâu.
+
+### 13. Hồ sơ lead với các trường đặc thù Hàn Quốc + điểm có giải thích
+
+![Hồ sơ lead](docs/screenshots/13-crm-lead.png)
+
+Ngoài thông tin cơ bản, lead có 사업자등록번호, 직급 (사원 → 대표이사, CTO/CIO),
+부서, 휴대폰 + 카카오톡 ID, quy mô (대기업/중견/중소/스타트업/공공), hình thức dự án
+(파견/도급/SI/SM/ODC), ngân sách KRW nhập được `1억 5000만`, **số nhân sự cần**,
+**thời điểm 발주 dự kiến** (Hàn chốt ngân sách cuối năm, phát 발주 theo 상반기/하반기),
+**cần bridge SE tiếng Hàn** hay không, vendor hiện tại / đối thủ, sales phụ trách,
+hành động tiếp + ngày. Điểm lead 0–100 tính theo quy tắc rõ ràng (IT Hiring, cấp ra
+quyết định, có email/điện thoại/KakaoTalk, ngân sách, nguồn, 발주 sắp tới, nhu cầu cả
+team) và hiện ngay **cách tính** — không có số ngẫu nhiên. Phía dưới là **nhật ký hoạt
+động** (gọi, email, KakaoTalk, họp, gửi đề xuất/báo giá); ghi một dòng là ngày liên hệ
+gần nhất tự cập nhật.
+
+### 14. Kanban kéo thả
+
+![Kanban](docs/screenshots/14-crm-kanban.png)
+
+Cùng dữ liệu ở dạng cột theo trạng thái. Kéo thẻ sang cột khác là đổi trạng thái và lưu
+ngay; thẻ quá hạn có nhãn đỏ. Ở bảng có thể chọn nhiều lead để đổi trạng thái hoặc xoá
+hàng loạt.
+
+### 15. Nhập từ Excel Hàn, xuất Excel / JSON
+
+![Nhập file](docs/screenshots/15-crm-import.png)
+
+Kéo thả CSV/JSON: app đọc được cả CSV **CP949** mà Excel tiếng Hàn lưu mặc định (không
+vỡ chữ), nhận tên cột tiếng Hàn / Việt / Anh (회사명, 담당자명, 직급, 휴대폰, 예산,
+발주예정…), quy đổi 직급 / 유입경로 / 상태 về mã chuẩn, và **xem trước** số dòng hợp lệ,
+trùng (theo email hoặc công ty + người liên hệ), lỗi trước khi ghi. Có CSV mẫu để tải.
+Xuất CSV (BOM, mở đúng trong Excel) hoặc JSON đúng những lead đang hiển thị.
+
 ## Ngôn ngữ
 
 Giao diện mặc định là **tiếng Hàn**. Nút ở góc phải header đổi qua lại 한국어 ↔ Tiếng Việt
@@ -185,7 +236,8 @@ backend/app/security.py    Kiểm tra URL, chặn localhost / private IP / metad
 backend/app/crawler.py     Crawl thật: fetch, encoding, domain isolation, Playwright
 backend/app/extractor.py   Trích xuất công ty / key contacts / tuyển dụng IT
 backend/app/storage.py     SQLite: luu / liet ke / mo lai / xoa cong ty
-backend/app/main.py        FastAPI: /api/scan, /api/scan/stream (SSE), /api/companies, 2 trang
+backend/app/crm.py         CRM: lead, chấm điểm, nhập CSV/JSON (CP949), nhật ký hoạt động
+backend/app/main.py        FastAPI: /api/scan, /api/scan/stream (SSE), /api/companies, /api/leads, 3 trang
 start.py                   Launcher: kiểm tra môi trường, chọn port, mở trình duyệt
 backend/scan_cli.py        Quét từ terminal
 backend/test_scanner.py    Test offline
@@ -193,24 +245,27 @@ backend/check_i18n.py      Kiểm tra bản dịch
 backend/take_screenshots.py Chụp ảnh thật của app cho README (Playwright)
 frontend/index.html        Trang "Quét mới" (giữ nguyên layout của prototype)
 frontend/saved.html        Trang "Công ty đã lưu"
+frontend/crm.html          Trang "CRM lead"
 frontend/i18n.js           Từ điển tiếng Hàn/tiếng Việt, chuyển ngôn ngữ
-frontend/app.js            Dùng chung 2 trang: gọi API, render kết quả, export, danh sách
+frontend/app.js            Dùng chung 3 trang: gọi API, render kết quả, export, danh sách
+frontend/crm.js            Trang CRM: KPI, bảng, Kanban, form lead, nhập/xuất file
 frontend/tailwind.css      CSS compiled lấy nguyên từ prototype
-frontend/app.css           Vài class bổ sung prototype chưa build (màu IT Hiring, lỗi, nút ngôn ngữ)
+frontend/app.css           Vài class bổ sung prototype chưa build (màu IT Hiring, lỗi, nút ngôn ngữ, toàn bộ CRM)
 ```
 
 `Company-Scanner-Prototype-Ui (1).html` được giữ nguyên làm UI reference, app không dùng file này.
 
-## Hai trang
+## Ba trang
 
-Điều hướng nằm ở góc phải header, có mặt trên cả hai trang:
+Điều hướng nằm ở góc phải header, có mặt trên cả ba trang:
 
 | Trang | URL | Nội dung |
 |---|---|---|
 | Quét mới | `/` | Nhập URL, quét, xem kết quả, lưu vào database |
 | Công ty đã lưu | `/saved` | Danh sách toàn bộ công ty trong database |
+| CRM lead | `/crm` | Pipeline bán hàng: lead, điểm, hoạt động, nhập/xuất |
 
-Số trên nút "Công ty đã lưu" là số công ty đang có.
+Số trên nút "Công ty đã lưu" là số công ty đang có; số trên "CRM lead" là số lead.
 
 ## Lưu vào database
 
@@ -291,6 +346,22 @@ Các endpoint của database:
 | GET | `/api/companies?full=1` | Như trên, kèm toàn bộ kết quả scan (dùng khi xuất JSON) |
 | GET | `/api/companies/{id}` | Tóm tắt + toàn bộ kết quả scan đã lưu |
 | DELETE | `/api/companies/{id}` | Xoá một công ty |
+
+CRM:
+
+| Method | Endpoint | Việc |
+|---|---|---|
+| GET | `/api/leads` | Toàn bộ lead, mới cập nhật xếp trước (kèm `overdue`) |
+| POST | `/api/leads` | Tạo lead (body `{"lead": {...}}`), server chuẩn hoá và chấm điểm |
+| GET | `/api/leads/{id}` | Lead + `score_breakdown` + `activities` |
+| PUT | `/api/leads/{id}` | Sửa một phần (chỉ gửi trường thay đổi), điểm tính lại |
+| DELETE | `/api/leads/{id}` | Xoá lead (xoá luôn nhật ký hoạt động) |
+| POST | `/api/leads/delete` | Xoá nhiều: body `{"ids": [...]}` |
+| POST | `/api/leads/from-company/{company_id}` | Tạo lead điền sẵn từ công ty đã quét; đã có thì trả lead cũ |
+| POST | `/api/leads/import` | Body `{"filename", "content_base64", "commit"}`; `commit=false` chỉ xem trước |
+| GET | `/api/leads/sample.csv` | CSV mẫu đúng cột import hiểu |
+| POST | `/api/leads/{id}/activities` | Ghi hoạt động `{"activity": {"type", "at", "note"}}`, cập nhật liên hệ gần nhất |
+| DELETE | `/api/activities/{id}` | Xoá một hoạt động |
 
 ## Giới hạn crawl
 
