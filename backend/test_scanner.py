@@ -482,6 +482,76 @@ check("delete leads (cascade activities)", crm.delete_leads([created["id"]]) == 
 check("activities gone with lead", crm.list_activities(created["id"]) == [])
 check("sample csv has BOM + korean headers", crm.sample_csv().startswith("\ufeff회사명"))
 
+# -- Khach hang / hop dong ----------------------------------------------------
+
+print("contracts")
+from datetime import date as _date, timedelta as _td  # noqa: E402
+
+from backend.app import contracts  # noqa: E402
+
+contracts.init_db()
+odc = contracts.create_contract({
+    "company_name": "토스", "website": "https://toss.im", "project_type": "odc", "monthly_rate": "800만",
+    "team_size": 5, "start_date": "2026-01-01", "end_date": "2026-12-31", "contact_name": "이승건",
+    "rank": "대표이사", "our_pm": "Huy", "tech": "Java, AWS", "satisfaction": 5,
+})
+check("amount = monthly x people x months", odc["amount"] == 480_000_000, f'-> {odc["amount"]}')
+check("domain from website", odc["domain"] == "toss.im")
+check("signed_date defaults to start", odc["signed_date"] == "2026-01-01")
+check("tech list", odc["tech"] == ["Java", "AWS"])
+
+soon = (_date.today() + _td(days=20)).isoformat()
+past = (_date.today() - _td(days=400)).isoformat()
+contracts.create_contract({"company_name": "토스", "domain": "toss.im", "amount": "1.5억",
+                           "start_date": "2025-01-01", "end_date": "2025-06-30", "status": "completed"})
+small = contracts.create_contract({"company_name": "작은회사", "amount": "3000만", "start_date": "2026-08-01", "end_date": soon})
+check("expiring inside notice window", small["expiring"] is True and 0 <= small["days_left"] <= 60)
+contracts.create_contract({"company_name": "옛고객", "amount": "6000만", "start_date": "2024-01-01", "end_date": past, "status": "completed"})
+contracts.create_contract({"company_name": "해지사", "amount": "9억", "start_date": "2026-01-01", "end_date": "2026-12-31", "status": "terminated"})
+
+customers = {c["company_name"]: c for c in contracts.list_customers()}
+check("customer groups by domain", customers["토스"]["contract_count"] == 2)
+check("total value sums non-terminated", customers["토스"]["total_value"] == 630_000_000)
+check("grade S for 5억+", customers["토스"]["grade"] == "S")
+check("grade C for small", customers["작은회사"]["grade"] == "C")
+check("grade A needs 2억 or repeat", contracts.grade_customer(60_000_000, 2) == "A" and contracts.grade_customer(60_000_000, 1) == "B")
+check("terminated contracts do not count", customers["해지사"]["total_value"] == 0 and customers["해지사"]["grade"] == "C")
+check("expiring count on customer", customers["작은회사"]["expiring_count"] == 1)
+check("dormant days for old customer", customers["옛고객"]["dormant_days"] is not None and customers["옛고객"]["dormant_days"] >= 399)
+check("customers sorted by value", list(customers)[0] == "토스")
+
+total = contracts.summary()
+check("summary total", total["total_value"] == 630_000_000 + 30_000_000 + 60_000_000)
+check("summary expiring", total["expiring_count"] == 1 and total["expiring_value"] == 30_000_000)
+
+resell = contracts.resell_lead_from_customer(customers["토스"])
+resell_lead = crm.create_lead(resell)
+check("resell lead source customer", resell_lead["source"] == "customer")
+check("resell lead memo has grade", "등급 S" in resell_lead["memo"])
+check("customer source scores high", crm.SOURCE_SCORE["customer"] > crm.SOURCE_SCORE["referral"])
+
+prefill = contracts.contract_from_lead({"id": 9, "company_name": "리드사", "budget": 120_000_000, "team_size": 3,
+                                        "expected_start": "2026-11", "contact_name": "김", "rank": "general", "mobile": "010-1-2"})
+check("contract from lead: start from expected month", prefill["start_date"] == "2026-11-01" and prefill["amount"] == 120_000_000)
+
+updated = contracts.update_contract(odc["id"], {"status": "renewed"})
+check("update contract", updated["status"] == "renewed")
+check("renewed counted", {c["company_name"]: c for c in contracts.list_customers()}["토스"]["renewed_count"] == 1)
+
+ics2 = crm.calendar_ics()
+check("ics carries contract expiry events", "contract-" in ics2 and "계약 만료" in ics2)
+
+for payload, code in (({"company_name": "x"}, "amount_required"),
+                      ({"company_name": "x", "amount": "1억", "start_date": "2026-05-01", "end_date": "2026-01-01"}, "dates_invalid"),
+                      ({"amount": "1억"}, "company_required")):
+    try:
+        contracts.create_contract(payload)
+        check(f"contract error {code}", False)
+    except contracts.ContractError as exc:
+        check(f"contract error {code}", str(exc) == code)
+
+check("delete contract", contracts.delete_contract(odc["id"]) is True and contracts.get_contract(odc["id"]) is None)
+
 for suffix in ("", "-wal", "-shm"):
     stale = _Path(str(storage.DB_PATH) + suffix)
     if stale.exists():

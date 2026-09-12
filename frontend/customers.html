@@ -1,0 +1,197 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title data-i18n-title="cust.title">Company Scanner</title>
+  <link rel="icon" type="image/png" sizes="32x32" href="/static/favicon-32.png">
+  <link rel="icon" href="/static/favicon.ico" sizes="any">
+  <link rel="apple-touch-icon" href="/static/favicon-180.png">
+  <link rel="stylesheet" href="/static/tailwind.css">
+  <link rel="stylesheet" href="/static/app.css">
+</head>
+<body>
+  <div class="min-h-screen bg-[#fcfcfd] text-slate-900 font-[system-ui,sans-serif] selection:bg-blue-100">
+
+    <header class="sticky top-0 z-30 backdrop-blur-xl bg-white/80 border-b border-slate-200/70">
+      <div class="mx-auto max-w-[1120px] px-5 md:px-6 h-[64px] flex items-center justify-between">
+        <div class="flex items-center gap-3">
+          <a href="/" class="brand-logo-link" aria-label="Company Scanner">
+            <img class="brand-logo" src="/static/magnifying_blue_icon.png" alt="Company Scanner">
+          </a>
+          <div class="leading-tight">
+            <div class="flex items-baseline gap-2">
+              <span class="font-semibold text-[15px] tracking-tight">Company Scanner</span>
+              <span class="hidden md:inline text-[11px] font-medium px-2 py-0.5 rounded-full bg-blue-50 text-blue-700 border border-blue-100">Live</span>
+            </div>
+            <div class="text-[12.5px] text-slate-500 -mt-0.5 hidden md:block" data-i18n="brand.subtitle"></div>
+          </div>
+        </div>
+
+        <div class="flex items-center gap-2">
+          <nav class="tabbar">
+            <a href="/" class="tab">
+              <span data-icon="search" data-size="15"></span><span class="tab-label" data-i18n="nav.scan"></span>
+            </a>
+            <a href="/saved" class="tab">
+              <span data-icon="database" data-size="15"></span><span class="tab-label" data-i18n="nav.saved"></span>
+              <span class="tab-badge" id="nav-saved-count">0</span>
+            </a>
+            <a href="/crm" class="tab">
+              <span data-icon="users" data-size="15"></span><span class="tab-label" data-i18n="nav.crm"></span>
+              <span class="tab-badge" id="nav-crm-count">0</span>
+            </a>
+            <a href="/customers" class="tab tab-active">
+              <span data-icon="handshake" data-size="15"></span><span class="tab-label" data-i18n="nav.customers"></span>
+              <span class="tab-badge" id="nav-customers-count">0</span>
+            </a>
+          </nav>
+
+          <div class="langbar">
+            <button type="button" class="lang-btn" data-lang-btn="ko" data-i18n="lang.ko"></button>
+            <button type="button" class="lang-btn" data-lang-btn="vi" data-i18n="lang.vi"></button>
+          </div>
+        </div>
+      </div>
+    </header>
+
+    <main class="mx-auto max-w-[1120px] px-5 md:px-6 py-8 md:py-10">
+
+      <div class="crm-head">
+        <div>
+          <h1 class="text-[24px] md:text-[30px] font-[700] tracking-tight leading-[1.15] text-slate-900" data-i18n="cust.heading"></h1>
+          <p class="mt-2 text-[13.5px] text-slate-500 leading-relaxed" data-i18n="cust.description"></p>
+        </div>
+        <div class="crm-head-actions">
+          <div class="relative">
+            <button id="cust-export-btn" class="crm-btn">
+              <span data-icon="sheet" data-size="15"></span> <span data-i18n="crm.export"></span> <span data-icon="chevron" data-size="13"></span>
+            </button>
+            <div id="cust-export-menu" class="hidden crm-menu">
+              <button id="cust-export-csv" class="crm-menu-item"><span data-icon="sheet" data-size="15"></span> <span data-i18n="cust.exportCsv"></span></button>
+              <button id="cust-export-json" class="crm-menu-item"><span data-icon="json" data-size="15"></span> <span data-i18n="cust.exportJson"></span></button>
+              <a href="/api/leads/calendar.ics" class="crm-menu-item"><span data-icon="clock" data-size="15"></span> <span data-i18n="cust.exportIcs"></span></a>
+            </div>
+          </div>
+          <button id="cust-add-btn" class="crm-btn crm-btn-primary"><span data-icon="plus" data-size="15"></span> <span data-i18n="cust.add"></span></button>
+        </div>
+      </div>
+
+      <div class="crm-kpis" id="cust-kpis"></div>
+
+      <div class="crm-toolbar">
+        <div class="saved-search">
+          <span class="saved-search-icon" data-icon="search" data-size="14"></span>
+          <input id="cust-search" type="text" class="saved-search-input crm-search" autocomplete="off" data-i18n-placeholder="cust.search">
+        </div>
+        <div class="crm-seg" id="cust-quick">
+          <button class="crm-seg-btn crm-seg-active" data-quick="all" data-i18n="cust.filter.all"></button>
+          <button class="crm-seg-btn" data-quick="expiring" data-i18n="cust.filter.expiring"></button>
+          <button class="crm-seg-btn" data-quick="active" data-i18n="cust.filter.active"></button>
+          <button class="crm-seg-btn" data-quick="dormant" data-i18n="cust.filter.dormant"></button>
+        </div>
+        <div class="crm-status-filters" id="cust-grade-filters"></div>
+        <span class="crm-count" id="cust-count"></span>
+      </div>
+
+      <div id="cust-list" class="cust-list"></div>
+      <div id="cust-empty" class="hidden crm-empty rounded-[20px] border border-slate-200 bg-white"></div>
+
+      <div class="mt-14 text-center text-[11px] text-slate-400" data-i18n="footer.note"></div>
+    </main>
+
+    <!-- Modal hợp đồng -->
+    <div id="contract-modal" class="hidden crm-overlay">
+      <div class="crm-modal crm-modal-wide">
+        <div class="crm-modal-head">
+          <div>
+            <h3 id="contract-modal-title" class="text-[16px] font-bold"></h3>
+            <p id="contract-modal-sub" class="text-[12px] text-slate-500 mt-0.5"></p>
+          </div>
+          <button type="button" class="crm-icon-btn" data-close="contract-modal" aria-label="close"><span data-icon="x" data-size="18"></span></button>
+        </div>
+
+        <form id="contract-form" class="crm-form" autocomplete="off">
+          <div class="crm-form-grid">
+            <section class="crm-fieldset">
+              <h4 data-i18n="cust.form.sectionContract"></h4>
+              <label><span><span data-i18n="crm.form.company"></span> *</span><input name="company_name" required list="cust-company-list"></label>
+              <datalist id="cust-company-list"></datalist>
+              <div class="crm-row-2">
+                <label><span data-i18n="cust.form.title"></span><input name="title" data-i18n-placeholder="cust.form.titleHint"></label>
+                <label><span data-i18n="cust.form.contractNo"></span><input name="contract_no"></label>
+              </div>
+              <div class="crm-row-2">
+                <label><span data-i18n="crm.form.project"></span><select name="project_type" data-options="project" data-blank="1"></select></label>
+                <label><span data-i18n="cust.form.status"></span><select name="status" data-options="cstatus"></select></label>
+              </div>
+              <div class="crm-row-2">
+                <label><span data-i18n="cust.form.start"></span><input name="start_date" type="date"></label>
+                <label><span data-i18n="cust.form.end"></span><input name="end_date" type="date"></label>
+              </div>
+              <div class="crm-row-2">
+                <label><span data-i18n="cust.form.signed"></span><input name="signed_date" type="date"></label>
+                <label><span data-i18n="cust.form.notice"></span><input name="renewal_notice_days" type="number" min="0" placeholder="60"></label>
+              </div>
+            </section>
+
+            <section class="crm-fieldset">
+              <h4 data-i18n="cust.form.sectionMoney"></h4>
+              <label><span data-i18n="cust.form.amount"></span><input name="amount" data-i18n-placeholder="cust.form.amountHint"></label>
+              <div class="crm-row-2">
+                <label><span data-i18n="cust.form.monthly"></span><input name="monthly_rate" data-i18n-placeholder="cust.form.monthlyHint"></label>
+                <label><span data-i18n="crm.form.teamSize"></span><input name="team_size" type="number" min="0"></label>
+              </div>
+              <div class="crm-row-2">
+                <label><span data-i18n="cust.form.payment"></span><select name="payment_terms" data-options="payment" data-blank="1"></select></label>
+                <label><span data-i18n="cust.form.satisfaction"></span><select name="satisfaction" data-options="stars" data-blank="1"></select></label>
+              </div>
+              <label><span data-i18n="crm.form.tech"></span><input name="tech" data-i18n-placeholder="crm.form.techHint"></label>
+              <div class="crm-row-2">
+                <label><span data-i18n="crm.form.website"></span><input name="website" placeholder="https://"></label>
+                <label><span data-i18n="crm.form.biz"></span><input name="biz_number" placeholder="000-00-00000"></label>
+              </div>
+            </section>
+
+            <section class="crm-fieldset">
+              <h4 data-i18n="cust.form.sectionContact"></h4>
+              <div class="crm-row-2">
+                <label><span data-i18n="crm.form.contactName"></span><input name="contact_name"></label>
+                <label><span data-i18n="crm.form.rank"></span><select name="rank" data-options="rank" data-blank="1"></select></label>
+              </div>
+              <div class="crm-row-2">
+                <label><span data-i18n="crm.form.department"></span><input name="department"></label>
+                <label><span data-i18n="crm.form.phone"></span><input name="phone"></label>
+              </div>
+              <label><span data-i18n="crm.form.email"></span><input name="email" type="email"></label>
+            </section>
+
+            <section class="crm-fieldset">
+              <h4 data-i18n="cust.form.sectionOurs"></h4>
+              <label><span data-i18n="cust.form.ourPm"></span><input name="our_pm"></label>
+              <label><span data-i18n="crm.form.memo"></span><textarea name="memo" rows="5" data-i18n-placeholder="cust.form.memoHint"></textarea></label>
+            </section>
+          </div>
+
+          <div id="contract-error" class="hidden crm-form-error"></div>
+
+          <div class="crm-modal-foot">
+            <div class="flex items-center gap-2">
+              <button type="button" id="contract-delete" class="crm-btn crm-btn-danger hidden"><span data-icon="trash" data-size="14"></span> <span data-i18n="crm.form.delete"></span></button>
+              <a id="contract-lead-link" class="crm-link hidden"><span data-icon="users" data-size="13"></span> <span data-i18n="cust.form.openLead"></span></a>
+            </div>
+            <div class="flex items-center gap-2">
+              <button type="button" class="crm-btn" data-close="contract-modal" data-i18n="crm.form.cancel"></button>
+              <button type="submit" id="contract-save" class="crm-btn crm-btn-primary" data-i18n="crm.form.save"></button>
+            </div>
+          </div>
+        </form>
+      </div>
+    </div>
+  </div>
+
+  <script src="/static/i18n.js"></script>
+  <script src="/static/app.js"></script>
+  <script src="/static/customers.js"></script>
+</body>
+</html>

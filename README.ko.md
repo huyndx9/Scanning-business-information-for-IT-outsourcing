@@ -11,8 +11,8 @@ URL을 입력하면 앱이 실제로 해당 웹사이트에 접속해 회사 소
 ## 기능 소개
 
 아래 이미지는 앱의 실제 화면이며, 데이터는 `scatterlab.co.kr`을 실제로 스캔한
-결과입니다. CRM 이미지(12–15)는 실제 스캔한 기업에서 만든 리드이며, 예산·상태·일정은
-파이프라인 설명을 위해 영업 담당자가 직접 입력한 값입니다.
+결과입니다. CRM 이미지(12–16)는 실제 스캔한 기업에서 만든 리드이며, 예산·상태·일정과 18–19의
+계약·금액은 설명을 위해 직접 입력한 예시 값으로 실제 계약이 아닙니다.
 `python backend/take_screenshots.py`로 다시 캡처할 수 있습니다.
 
 ### 1. URL 입력, 실제 웹사이트 스캔
@@ -183,6 +183,31 @@ CSV/JSON을 끌어다 놓으면 한국어 Excel이 기본으로 저장하는 **C
 샘플 CSV도 내려받을 수 있습니다. 현재 보이는 리드를 CSV(BOM 포함, Excel에서 바로
 열림) 또는 JSON으로 내보냅니다.
 
+### 16. 계약 고객 — 금액·기간·등급·재계약 기회
+
+![계약 고객](docs/screenshots/18-customers.png)
+
+`/customers` 페이지는 수주 이후 단계입니다. CRM에서 리드를 **수주**로 바꾸면 바로 계약
+등록을 제안하고, 회사·담당자·예산·인원·시작 월이 리드에서 채워진 폼이 열립니다. 고객
+카드는 같은 회사의 모든 계약을 모아 **누적 계약 금액**(LTV), 진행 중 금액, 다음 만료일,
+만족도, 재계약 횟수를 보여줍니다. **S/A/B/C 등급**은 공개된 규칙으로 계산합니다(S: 5억
+이상 또는 2억 이상+계약 3건 이상, A: 2억 이상 또는 5천만 이상+2건 이상, B: 5천만 이상).
+등급에 마우스를 올리면 근거가 보입니다.
+
+리셀 기회를 놓치지 않도록, 만료까지 60일 이하(계약별 조정 가능)인 계약에는 **만료 임박**
+표시가 붙고, 상단 KPI에 만료 임박 금액 합계, **만료 임박 / 휴면 고객**(진행 중 계약이 없는
+고객) 빠른 필터, 그리고 `.ics` 캘린더에 "계약 만료 60일 전 — 재계약 제안" 일정이
+들어갑니다. **재계약 리드** 버튼은 유입경로 *기존 고객*(기존 고객이 가장 빨리 성사되므로
+유입경로 점수 최고)으로 CRM 리드를 즉시 만들고, 메모에 계약 이력과 등급을 적어 둡니다.
+
+![계약 폼](docs/screenshots/19-contract-form.png)
+
+계약에는 계약명/번호, 사업 유형(파견/도급/SI/SM/ODC), 기간, **KRW 금액**(`2억 4000만`
+형식 입력 가능, 비우면 **월 단가 M/M × 인원 × 개월**로 자동 계산 — 파견/ODC 정산 방식),
+결제 조건(월말 청구 / 선금·중도·잔금 / 분기 / 선불), 상태(진행 중 / 완료 / 재계약됨 / 중도
+해지 — 중도 해지는 등급에서 제외), 고객 담당자, 우리 측 담당, 기술스택, 만족도 ★1–5, 메모가
+있습니다. 계약 단위 Excel 또는 고객 단위 JSON으로 내보낼 수 있습니다.
+
 ## 언어
 
 기본 언어는 **한국어**입니다. 헤더 오른쪽 버튼으로 한국어 ↔ Tiếng Việt를 즉시 전환할
@@ -284,7 +309,8 @@ backend/app/crawler.py     실제 크롤링: fetch, 인코딩, 도메인 격리,
 backend/app/extractor.py   기업 / 주요 담당자 / IT 채용 정보 추출
 backend/app/storage.py     SQLite: 저장 / 목록 / 다시 열기 / 삭제, 스캔 이력(scan_history)
 backend/app/crm.py         CRM: 리드, 점수 계산, CSV/JSON(CP949) 가져오기, 활동 기록
-backend/app/main.py        FastAPI: /api/scan, /api/scan/stream (SSE), /api/companies, /api/leads, 3개 페이지
+backend/app/contracts.py   계약 고객: 계약, S/A/B/C 등급, 만료 임박, 재계약 리드
+backend/app/main.py        FastAPI: /api/scan, /api/scan/stream (SSE), /api/companies, /api/leads, /api/contracts, 4개 페이지
 start.py                   실행기: 환경 확인, 포트 선택, 브라우저 열기
 backend/scan_cli.py        터미널에서 스캔
 backend/rescan_cli.py      정기 재스캔 / URL 파일 일괄 스캔, 이력 기록
@@ -294,24 +320,27 @@ backend/take_screenshots.py README용 실제 화면 캡처 (Playwright)
 frontend/index.html        "새 스캔" 페이지 (프로토타입 레이아웃 유지)
 frontend/saved.html        "저장된 기업" 페이지
 frontend/crm.html          "CRM 리드" 페이지
+frontend/customers.html    "고객" 페이지 (계약 고객)
 frontend/i18n.js           한국어/베트남어 사전, 언어 전환
 frontend/app.js            세 페이지 공용: API 호출, 결과 렌더링, 내보내기, 목록
 frontend/crm.js            CRM 페이지: KPI, 테이블, 칸반, 리드 폼, 파일 가져오기/내보내기
+frontend/customers.js      고객 페이지: 고객 카드, 계약, 폼, 내보내기
 frontend/tailwind.css      프로토타입에서 그대로 가져온 컴파일 CSS
 frontend/app.css           프로토타입에 없던 클래스 보완 (IT 채용 색상, 오류, 언어 버튼, CRM 전체)
 ```
 
 `Company-Scanner-Prototype-Ui (1).html`은 UI 참고용으로 남겨둔 파일이며 앱은 사용하지 않습니다.
 
-## 세 개의 페이지
+## 네 개의 페이지
 
-헤더 오른쪽에 세 페이지 이동 버튼이 항상 표시됩니다.
+헤더 오른쪽에 네 페이지 이동 버튼이 항상 표시됩니다.
 
 | 페이지 | URL | 내용 |
 |---|---|---|
 | 새 스캔 | `/` | URL 입력, 스캔, 결과 확인, 데이터베이스 저장 |
 | 저장된 기업 | `/saved` | 데이터베이스에 저장된 전체 기업 목록 |
 | CRM 리드 | `/crm` | 영업 파이프라인: 리드, 점수, 활동, 가져오기/내보내기 |
+| 고객 | `/customers` | 계약 고객: 금액, 기간, 등급, 재계약 기회 |
 
 "저장된 기업" 버튼의 숫자는 현재 저장된 기업 수, "CRM 리드"의 숫자는 리드 수입니다.
 
@@ -410,6 +439,17 @@ CRM:
 | GET | `/api/leads/calendar.ics` | iCalendar: "다음 액션 날짜"가 있는 진행 중 리드마다 종일 일정 하나 |
 | POST | `/api/leads/{id}/activities` | 활동 기록 `{"activity": {"type", "at", "note"}}`, 마지막 접촉일 갱신 |
 | DELETE | `/api/activities/{id}` | 활동 한 건 삭제 |
+
+고객 / 계약:
+
+| Method | Endpoint | 역할 |
+|---|---|---|
+| GET | `/api/customers` | 회사별로 묶은 고객(등급, 누적 금액, 만료 임박, 휴면, 계약 목록) + `summary` KPI |
+| POST | `/api/customers/{key}/lead` | 이 고객으로 CRM 재계약 리드 생성 (유입경로 `customer`) |
+| GET | `/api/contracts` | 전체 계약 (`days_left`, `expiring` 포함) |
+| POST | `/api/contracts` | 계약 생성 `{"contract": {...}}`; `amount`가 없으면 `monthly_rate × team_size × 개월`로 계산 |
+| GET | `/api/contracts/from-lead/{lead_id}` | 리드에서 채운 계약 초안 (저장 안 함) |
+| GET / PUT / DELETE | `/api/contracts/{id}` | 조회 / 부분 수정 / 삭제 |
 
 ## 크롤링 제한
 

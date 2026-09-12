@@ -14,7 +14,7 @@
   const OPTION_LISTS = {
     status: STATUSES,
     rank: ["staff", "assistant", "manager", "deputy", "general", "director", "md", "evp", "svp", "ceo", "cto", "cio", "other"],
-    source: ["scanner", "referral", "exhibition", "linkedin", "wanted", "saramin", "jobkorea", "coldcall", "website", "naver", "other"],
+    source: ["scanner", "referral", "exhibition", "linkedin", "wanted", "saramin", "jobkorea", "coldcall", "website", "naver", "customer", "other"],
     project: ["dispatch", "contract", "si", "sm", "odc", "other"],
     size: ["enterprise", "midsize", "sme", "startup", "public"],
     lost: ["price", "schedule", "competitor", "inhouse", "budget", "language", "other"],
@@ -368,9 +368,17 @@
     try {
       await api(`/api/leads/${id}`, { ...jsonBody({ lead: { status } }), method: "PUT" });
       await loadLeads();
+      if (status === "won") offerContract(id);
     } catch (_) {
       toast(t("crm.error.saveFailed"), "error");
       render();
+    }
+  }
+
+  /* Lead vừa 수주: hỏi ghi hợp đồng ngay (form điền sẵn ở trang 고객). */
+  function offerContract(id) {
+    if (window.confirm(t("crm.wonRegisterContract"))) {
+      window.location.href = `/customers?from_lead=${id}`;
     }
   }
 
@@ -496,13 +504,16 @@
     leadError.classList.add("hidden");
     try {
       const data = readForm();
+      const becameWon = data.status === "won" && (!editing || editing.status !== "won");
+      let savedLead = null;
       if (editing) {
-        await api(`/api/leads/${editing.id}`, { ...jsonBody({ lead: data }), method: "PUT" });
+        savedLead = await api(`/api/leads/${editing.id}`, { ...jsonBody({ lead: data }), method: "PUT" });
       } else {
-        await api("/api/leads", jsonBody({ lead: data }));
+        savedLead = await api("/api/leads", jsonBody({ lead: data }));
       }
       hideModal("lead-modal");
       await loadLeads();
+      if (becameWon && savedLead) offerContract(savedLead.id);
     } catch (error) {
       const known = ["company_required", "email_invalid"].includes(error.code);
       leadError.textContent = known ? t("crm.error." + error.code) : t("crm.error.saveFailed");

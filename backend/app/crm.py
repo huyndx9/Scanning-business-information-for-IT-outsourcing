@@ -45,7 +45,7 @@ ACTIVITY_TYPES = ("call", "email", "kakao", "meeting", "proposal", "quote", "oth
 RANKS = ("staff", "assistant", "manager", "deputy", "general", "director",
          "md", "evp", "svp", "ceo", "cto", "cio", "other")
 SOURCES = ("scanner", "referral", "exhibition", "linkedin", "wanted", "saramin",
-           "jobkorea", "coldcall", "website", "naver", "other")
+           "jobkorea", "coldcall", "website", "naver", "customer", "other")
 PROJECT_TYPES = ("dispatch", "contract", "si", "sm", "odc", "other")
 COMPANY_SIZES = ("enterprise", "midsize", "sme", "startup", "public")
 
@@ -76,7 +76,7 @@ RANK_SCORE = {
 HIRING_SCORE = {"High": 25, "Medium": 15, "Low": 6, "None": 0}
 SOURCE_SCORE = {"referral": 10, "exhibition": 8, "website": 8, "scanner": 4,
                 "linkedin": 4, "wanted": 5, "saramin": 5, "jobkorea": 5, "coldcall": 0,
-                "naver": 3, "other": 0}
+                "naver": 3, "customer": 12, "other": 0}   # khach cu quay lai: ty le chot cao nhat
 
 # Cong nghe nhan ra trong tieu de tin tuyen dung cua scanner -> tech stack.
 TECH_KEYWORDS = [
@@ -702,6 +702,7 @@ SOURCE_ALIASES = {
     "홈페이지": "website", "웹사이트": "website", "website": "website", "inbound": "website",
     "네이버": "naver", "naver": "naver",
     "스캐너": "scanner", "scanner": "scanner",
+    "기존고객": "customer", "기존 고객": "customer", "재계약": "customer", "customer": "customer", "khách cũ": "customer",
 }
 STATUS_ALIASES = {
     "신규": "new", "new": "new", "mới": "new",
@@ -850,21 +851,27 @@ def calendar_ics() -> str:
     stamp = datetime.now(timezone.utc).strftime("%Y%m%dT%H%M%SZ")
     lines = ["BEGIN:VCALENDAR", "VERSION:2.0", "PRODID:-//Company Scanner//CRM//KO", "CALSCALE:GREGORIAN",
              "X-WR-CALNAME:CRM 리드 일정"]
+    events = []
     for lead in list_leads():
         if not lead.get("next_date") or lead["status"] not in OPEN_STATUSES:
             continue
-        day = lead["next_date"].replace("-", "")
         summary = f"[CRM] {lead['company_name']}" + (f" — {lead['next_action']}" if lead.get("next_action") else "")
         details = [part for part in (
             lead.get("contact_name"), lead.get("mobile") or lead.get("phone"), lead.get("email"), lead.get("memo"),
         ) if part]
+        events.append({"uid": f"lead-{lead['id']}", "date": lead["next_date"], "summary": summary,
+                       "description": chr(10).join(details)})
+    # Hop dong sap het han: nhac truoc N ngay de de xuat 재계약.
+    from .contracts import calendar_events  # noqa: E402 - tranh import vong
+    events.extend(calendar_events())
+    for event in events:
         lines += [
             "BEGIN:VEVENT",
-            f"UID:lead-{lead['id']}@company-scanner",
+            f"UID:{event['uid']}@company-scanner",
             f"DTSTAMP:{stamp}",
-            f"DTSTART;VALUE=DATE:{day}",
-            f"SUMMARY:{escape(summary)}",
-            f"DESCRIPTION:{escape(chr(10).join(details))}",
+            f"DTSTART;VALUE=DATE:{event['date'].replace('-', '')}",
+            f"SUMMARY:{escape(event['summary'])}",
+            f"DESCRIPTION:{escape(event.get('description') or '')}",
             "END:VEVENT",
         ]
     lines.append("END:VCALENDAR")

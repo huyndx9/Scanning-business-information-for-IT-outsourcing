@@ -190,6 +190,22 @@ async def main() -> int:
             print("  15-crm-import.png")
             await page.keyboard.press("Escape")
 
+        # -- 18-19. Khách hàng / hợp đồng -----------------------------------------------
+        await page.goto(BASE + "/customers")
+        await page.wait_for_load_state("networkidle")
+        if await page.locator(".cust-card").count() > 0:
+            await page.locator(".cust-card-head").first.click()
+            await page.wait_for_timeout(300)
+            await shot_viewport(page, "18-customers.png")
+            await page.set_viewport_size({"width": 1280, "height": 1400})
+            await page.locator("[data-edit]").first.click()
+            await page.wait_for_selector("#contract-modal:not(.hidden)")
+            await page.wait_for_timeout(300)
+            await page.locator("#contract-modal .crm-modal").screenshot(path=str(OUT / "19-contract-form.png"))
+            print("  19-contract-form.png")
+            await page.keyboard.press("Escape")
+            await page.set_viewport_size({"width": 1280, "height": 800})
+
         await browser.close()
 
     total = sum(f.stat().st_size for f in OUT.glob("*.png"))

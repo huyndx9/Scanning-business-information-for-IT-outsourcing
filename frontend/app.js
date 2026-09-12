@@ -41,6 +41,7 @@ const ICONS = {
   trash: '<path d="M3 6h18"/><path d="M19 6v14c0 1-1 2-2 2H7c-1 0-2-1-2-2V6"/><path d="M8 6V4c0-1 1-2 2-2h4c1 0 2 1 2 2v2"/>',
   refresh: '<path d="M3 12a9 9 0 0 1 9-9 9.75 9.75 0 0 1 6.74 2.74L21 8"/><path d="M21 3v5h-5"/><path d="M21 12a9 9 0 0 1-9 9 9.75 9.75 0 0 1-6.74-2.74L3 16"/><path d="M8 16H3v5"/>',
   eye: '<path d="M2.062 12.348a1 1 0 0 1 0-.696 10.75 10.75 0 0 1 19.876 0 1 1 0 0 1 0 .696 10.75 10.75 0 0 1-19.876 0"/><circle cx="12" cy="12" r="3"/>',
+  handshake: '<path d="m11 17 2 2a1 1 0 1 0 3-3"/><path d="m14 14 2.5 2.5a1 1 0 1 0 3-3l-3.88-3.88a3 3 0 0 0-4.24 0l-.88.88a1 1 0 1 1-3-3l2.81-2.81a5.79 5.79 0 0 1 7.06-.54l.34.23a1 1 0 0 0 1.33-.12L21 6"/><path d="m21 3 1 11h-2"/><path d="M3 3 2 14l6.5 6.5a1 1 0 1 0 3-3"/><path d="M3 4h8"/>',
   userplus: '<path d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><line x1="19" x2="19" y1="8" y2="14"/><line x1="22" x2="16" y1="11" y2="11"/>',
 };
 
@@ -99,6 +100,19 @@ async function refreshNavCrmBadge() {
   }
 }
 refreshNavCrmBadge();
+
+const navCustomersBadge = document.getElementById("nav-customers-count");
+async function refreshNavCustomersBadge() {
+  if (!navCustomersBadge || document.getElementById("cust-list")) return;
+  try {
+    const response = await fetch("/api/customers");
+    if (!response.ok) return;
+    navCustomersBadge.textContent = String(((await response.json()).customers || []).length);
+  } catch (_) {
+    // Badge giữ 0.
+  }
+}
+refreshNavCustomersBadge();
 
 /* Trang không tự tải danh sách công ty (như /crm) vẫn cần số trên tab "Công ty đã lưu". */
 async function refreshNavSavedBadge() {

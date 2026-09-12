@@ -710,6 +710,37 @@ label.batch-toggle input { display: none; }
 .batch-table .crm-clip { max-width: 200px; }
 .batch-table .saved-trend { margin-left: 4px; }
 
+/* --- Khach hang / hop dong (/customers) ------------------------------------------ */
+
+.cust-list { display: flex; flex-direction: column; gap: 10px; }
+.cust-card { background: #fff; border: 1px solid #e2e8f0; border-radius: 16px; box-shadow: 0 1px 2px rgba(15,23,42,.04); }
+.cust-card-head { display: flex; align-items: center; gap: 14px; padding: 14px 16px; cursor: pointer; }
+.cust-card-head:hover { background: #f8fafc; border-radius: 16px; }
+.cust-card-open .cust-card-head { border-bottom: 1px solid #f1f5f9; border-radius: 16px 16px 0 0; }
+.cust-card-main { flex: 1; min-width: 0; }
+.cust-card-name { font-size: 15px; font-weight: 700; display: flex; align-items: baseline; gap: 8px; flex-wrap: wrap; }
+.cust-card-name a { font-weight: 500; text-decoration: none; }
+.cust-card-name a:hover { color: #2563eb; }
+.cust-card-meta { max-width: 420px; }
+.cust-card-stats { display: grid; grid-template-columns: repeat(4, auto); gap: 18px; }
+.cust-stat { text-align: right; min-width: 74px; }
+.cust-stat-value { font-size: 14px; font-weight: 700; white-space: nowrap; }
+.cust-card-actions { display: flex; align-items: center; gap: 6px; }
+.cust-chevron { color: #94a3b8; transition: transform .15s; display: flex; }
+.cust-card-open .cust-chevron { transform: rotate(180deg); }
+.cust-card-body { padding: 4px 8px 8px; }
+.cust-card-body .crm-table tbody tr { cursor: default; }
+@media (max-width: 900px) { .cust-card-head { flex-wrap: wrap; } .cust-card-stats { grid-template-columns: repeat(2, auto); } }
+
+.cust-grade {
+  flex-shrink: 0; width: 40px; height: 40px; border-radius: 12px; display: inline-flex; align-items: center; justify-content: center;
+  font-size: 18px; font-weight: 800; color: #fff;
+}
+.cust-grade-S { background: #7c3aed; }
+.cust-grade-A { background: #059669; }
+.cust-grade-B { background: #2563eb; }
+.cust-grade-C { background: #94a3b8; }
+
 /* --- Toast ------------------------------------------------------------------- */
 
 #crm-toast { position: fixed; right: 20px; bottom: 20px; z-index: 60; display: flex; flex-direction: column; gap: 8px; }

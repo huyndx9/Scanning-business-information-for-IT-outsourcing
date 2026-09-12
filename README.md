@@ -11,8 +11,9 @@ mỗi URL là một lần scan độc lập, không tìm thấy thì trả `Not 
 ## Tính năng
 
 Ảnh dưới đây là ảnh chụp thật của app, dữ liệu là kết quả quét thật từ website
-`scatterlab.co.kr`. Ảnh CRM (12–15) dùng lead tạo từ các công ty đã quét thật; phần
-ngân sách, trạng thái, lịch hẹn là dữ liệu sales nhập tay để minh hoạ pipeline.
+`scatterlab.co.kr`. Ảnh CRM (12–16) dùng lead tạo từ các công ty đã quét thật; phần
+ngân sách, trạng thái, lịch hẹn và các hợp đồng/số tiền ở ảnh 18–19 là dữ liệu nhập tay để
+minh hoạ, không phải hợp đồng thật.
 Chụp lại bằng `python backend/take_screenshots.py`.
 
 ### 1. Nhập URL, quét website thật
@@ -183,6 +184,32 @@ vỡ chữ), nhận tên cột tiếng Hàn / Việt / Anh (회사명, 담당자
 trùng (theo email hoặc công ty + người liên hệ), lỗi trước khi ghi. Có CSV mẫu để tải.
 Xuất CSV (BOM, mở đúng trong Excel) hoặc JSON đúng những lead đang hiển thị.
 
+### 16. Khách hàng đã ký hợp đồng — giá trị, thời hạn, xếp hạng, cơ hội tái ký
+
+![Khách hàng](docs/screenshots/18-customers.png)
+
+Trang `/customers` là bước sau khi thắng deal. Ở CRM, đổi lead sang **수주** là app hỏi
+ghi hợp đồng ngay — form mở với công ty, người liên hệ, ngân sách, số người, tháng bắt
+đầu điền sẵn từ lead. Mỗi khách hàng gom mọi hợp đồng của cùng công ty và hiện: **tổng giá
+trị đã ký** (LTV), giá trị đang thực hiện, ngày hết hạn gần nhất, mức hài lòng, số lần tái
+ký. **Hạng S/A/B/C** tính theo quy tắc công khai (S: ≥ 5억 hoặc ≥ 2억 với ≥ 3 hợp đồng;
+A: ≥ 2억 hoặc ≥ 5천만 với ≥ 2 hợp đồng; B: ≥ 5천만) — di chuột vào hạng là thấy lý do.
+
+Để không bỏ lỡ resell: hợp đồng còn ≤ 60 ngày (tuỳ chỉnh từng hợp đồng) được gắn
+**만료 임박**, KPI đầu trang gom tổng giá trị sắp hết hạn, lọc nhanh **만료 임박 / 휴면 고객**
+(khách không còn hợp đồng đang chạy), và lịch `.ics` có sẵn sự kiện "계약 만료 60일 전 —
+재계약 제안". Nút **재계약 리드** tạo ngay một lead ở CRM với nguồn *기존 고객* (điểm nguồn
+cao nhất vì khách cũ chốt nhanh nhất), memo ghi sẵn lịch sử hợp đồng và hạng.
+
+![Form hợp đồng](docs/screenshots/19-contract-form.png)
+
+Hợp đồng có tên/số HĐ, hình thức (파견/도급/SI/SM/ODC), thời gian, **giá trị KRW** (nhập
+được `2억 4000만`; bỏ trống thì tự tính = **đơn giá tháng M/M × người × số tháng** — cách
+tính tiền của 파견/ODC), điều khoản thanh toán (월말 청구 / 선금·중도·잔금 / 분기 / 선불),
+trạng thái (진행 중 / 완료 / 재계약됨 / 중도 해지 — 중도 해지 không tính vào hạng), liên hệ phía
+khách, người phụ trách phía mình, tech stack, mức hài lòng ★1–5 và ghi chú. Xuất Excel
+theo hợp đồng hoặc JSON theo khách hàng.
+
 ## Ngôn ngữ
 
 Giao diện mặc định là **tiếng Hàn**. Nút ở góc phải header đổi qua lại 한국어 ↔ Tiếng Việt
@@ -284,7 +311,8 @@ backend/app/crawler.py     Crawl thật: fetch, encoding, domain isolation, Play
 backend/app/extractor.py   Trích xuất công ty / key contacts / tuyển dụng IT
 backend/app/storage.py     SQLite: luu / liet ke / mo lai / xoa cong ty, lich su quet (scan_history)
 backend/app/crm.py         CRM: lead, chấm điểm, nhập CSV/JSON (CP949), nhật ký hoạt động
-backend/app/main.py        FastAPI: /api/scan, /api/scan/stream (SSE), /api/companies, /api/leads, 3 trang
+backend/app/contracts.py   Khách hàng đã ký: hợp đồng, hạng S/A/B/C, sắp hết hạn, lead tái ký
+backend/app/main.py        FastAPI: /api/scan, /api/scan/stream (SSE), /api/companies, /api/leads, /api/contracts, 4 trang
 start.py                   Launcher: kiểm tra môi trường, chọn port, mở trình duyệt
 backend/scan_cli.py        Quét từ terminal
 backend/rescan_cli.py      Quét lại định kỳ / quét hàng loạt từ file URL, ghi lịch sử
@@ -294,24 +322,27 @@ backend/take_screenshots.py Chụp ảnh thật của app cho README (Playwright
 frontend/index.html        Trang "Quét mới" (giữ nguyên layout của prototype)
 frontend/saved.html        Trang "Công ty đã lưu"
 frontend/crm.html          Trang "CRM lead"
+frontend/customers.html    Trang "Khách hàng" (hợp đồng đã ký)
 frontend/i18n.js           Từ điển tiếng Hàn/tiếng Việt, chuyển ngôn ngữ
 frontend/app.js            Dùng chung 3 trang: gọi API, render kết quả, export, danh sách
 frontend/crm.js            Trang CRM: KPI, bảng, Kanban, form lead, nhập/xuất file
+frontend/customers.js      Trang khách hàng: thẻ khách, hợp đồng, form, xuất
 frontend/tailwind.css      CSS compiled lấy nguyên từ prototype
 frontend/app.css           Vài class bổ sung prototype chưa build (màu IT Hiring, lỗi, nút ngôn ngữ, toàn bộ CRM)
 ```
 
 `Company-Scanner-Prototype-Ui (1).html` được giữ nguyên làm UI reference, app không dùng file này.
 
-## Ba trang
+## Bốn trang
 
-Điều hướng nằm ở góc phải header, có mặt trên cả ba trang:
+Điều hướng nằm ở góc phải header, có mặt trên cả bốn trang:
 
 | Trang | URL | Nội dung |
 |---|---|---|
 | Quét mới | `/` | Nhập URL, quét, xem kết quả, lưu vào database |
 | Công ty đã lưu | `/saved` | Danh sách toàn bộ công ty trong database |
 | CRM lead | `/crm` | Pipeline bán hàng: lead, điểm, hoạt động, nhập/xuất |
+| Khách hàng | `/customers` | Hợp đồng đã ký: giá trị, thời hạn, hạng, cơ hội tái ký |
 
 Số trên nút "Công ty đã lưu" là số công ty đang có; số trên "CRM lead" là số lead.
 
@@ -411,6 +442,17 @@ CRM:
 | GET | `/api/leads/calendar.ics` | Lịch iCalendar: một sự kiện cả ngày cho mỗi lead đang mở có "다음 액션 날짜" |
 | POST | `/api/leads/{id}/activities` | Ghi hoạt động `{"activity": {"type", "at", "note"}}`, cập nhật liên hệ gần nhất |
 | DELETE | `/api/activities/{id}` | Xoá một hoạt động |
+
+Khách hàng / hợp đồng:
+
+| Method | Endpoint | Việc |
+|---|---|---|
+| GET | `/api/customers` | Khách hàng gom theo công ty (hạng, tổng giá trị, sắp hết hạn, ngủ đông, danh sách hợp đồng) + `summary` KPI |
+| POST | `/api/customers/{key}/lead` | Tạo lead tái ký ở CRM từ khách này (nguồn `customer`) |
+| GET | `/api/contracts` | Mọi hợp đồng (kèm `days_left`, `expiring`) |
+| POST | `/api/contracts` | Tạo hợp đồng `{"contract": {...}}`; thiếu `amount` thì tính từ `monthly_rate × team_size × tháng` |
+| GET | `/api/contracts/from-lead/{lead_id}` | Hợp đồng điền sẵn từ lead (chưa ghi) |
+| GET / PUT / DELETE | `/api/contracts/{id}` | Xem / sửa một phần / xoá |
 
 ## Giới hạn crawl
 

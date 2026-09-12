@@ -5,6 +5,7 @@ GET  /api/scan/stream     -> same work, streaming real progress over SSE
 GET  /                    -> the scanner UI (frontend/index.html)
 GET  /saved               -> saved companies
 GET  /crm                 -> CRM leads (frontend/crm.html), API under /api/leads
+GET  /customers           -> signed customers & contracts, API under /api/contracts, /api/customers
 """
 from __future__ import annotations
 
@@ -18,7 +19,7 @@ from fastapi.responses import FileResponse, JSONResponse, PlainTextResponse, Str
 from fastapi.staticfiles import StaticFiles
 from pydantic import BaseModel
 
-from . import crm
+from . import contracts, crm
 from .crawler import Crawler, CrawlError
 from .extractor import build_result
 from .security import DomainNotResolved, UrlNotAllowed, normalize_input_url, validate_url
@@ -330,10 +331,88 @@ def activity_delete(activity_id: int) -> JSONResponse:
     return JSONResponse(content={"deleted": activity_id})
 
 
+# -- Khach hang da ky hop dong -----------------------------------------------------
+
+
+class ContractPayload(BaseModel):
+    contract: dict
+
+
+def _contract_error(exc: Exception) -> JSONResponse:
+    return JSONResponse(status_code=400, content={"error": {"code": str(exc) or "invalid", "message": str(exc)}})
+
+
+@app.get("/api/contracts")
+def contracts_list() -> JSONResponse:
+    return JSONResponse(content={"contracts": contracts.list_contracts()})
+
+
+@app.post("/api/contracts")
+def contract_create(payload: ContractPayload) -> JSONResponse:
+    try:
+        return JSONResponse(content=contracts.create_contract(payload.contract))
+    except contracts.ContractError as exc:
+        return _contract_error(exc)
+
+
+@app.get("/api/contracts/from-lead/{lead_id}")
+def contract_from_lead(lead_id: int) -> JSONResponse:
+    """Hop dong dien san tu lead (chua ghi), de mo form khi lead vua 수주."""
+    lead = crm.get_lead(lead_id)
+    if lead is None:
+        return JSONResponse(status_code=404, content={"error": {"code": "not_found", "message": "Not found."}})
+    return JSONResponse(content={"contract": contracts.contract_from_lead(lead)})
+
+
+@app.get("/api/contracts/{contract_id}")
+def contract_detail(contract_id: int) -> JSONResponse:
+    contract = contracts.get_contract(contract_id)
+    if contract is None:
+        return JSONResponse(status_code=404, content={"error": {"code": "not_found", "message": "Not found."}})
+    return JSONResponse(content=contract)
+
+
+@app.put("/api/contracts/{contract_id}")
+def contract_update(contract_id: int, payload: ContractPayload) -> JSONResponse:
+    try:
+        contract = contracts.update_contract(contract_id, payload.contract)
+    except contracts.ContractError as exc:
+        return _contract_error(exc)
+    if contract is None:
+        return JSONResponse(status_code=404, content={"error": {"code": "not_found", "message": "Not found."}})
+    return JSONResponse(content=contract)
+
+
+@app.delete("/api/contracts/{contract_id}")
+def contract_delete(contract_id: int) -> JSONResponse:
+    if not contracts.delete_contract(contract_id):
+        return JSONResponse(status_code=404, content={"error": {"code": "not_found", "message": "Not found."}})
+    return JSONResponse(content={"deleted": contract_id})
+
+
+@app.get("/api/customers")
+def customers_list() -> JSONResponse:
+    return JSONResponse(content={"customers": contracts.list_customers(), "summary": contracts.summary()})
+
+
+@app.post("/api/customers/{key}/lead")
+def customer_resell_lead(key: str) -> JSONResponse:
+    """Tao lead 재계약/업셀 tu khach hang da ky (nguon 'customer')."""
+    customer = next((c for c in contracts.list_customers() if c["key"] == key), None)
+    if customer is None:
+        return JSONResponse(status_code=404, content={"error": {"code": "not_found", "message": "Not found."}})
+    try:
+        lead = crm.create_lead(contracts.resell_lead_from_customer(customer))
+    except crm.LeadError as exc:
+        return _lead_error(exc)
+    return JSONResponse(content={"lead": lead})
+
+
 @app.on_event("startup")
 def _startup() -> None:
     init_db()
     crm.init_db()
+    contracts.init_db()
 
 
 @app.get("/api/health")
@@ -357,6 +436,12 @@ async def saved_page() -> FileResponse:
 async def crm_page() -> FileResponse:
     """Trang CRM: lead, pipeline, hoạt động."""
     return _page("crm.html")
+
+
+@app.get("/customers")
+async def customers_page() -> FileResponse:
+    """Trang khách hàng đã ký hợp đồng."""
+    return _page("customers.html")
 
 
 app.mount("/static", NoCacheStaticFiles(directory=str(FRONTEND_DIR)), name="static")

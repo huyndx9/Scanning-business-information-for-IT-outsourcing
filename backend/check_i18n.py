@@ -166,8 +166,8 @@ else:
 # -- Khoá dùng trong code có khớp từ điển không ----------------------------
 
 print("khoa dung trong code")
-app_js = read("app.js") + read("crm.js")
-html = read("index.html") + read("saved.html") + read("crm.html")
+app_js = read("app.js") + read("crm.js") + read("customers.js")
+html = read("index.html") + read("saved.html") + read("crm.html") + read("customers.html")
 
 used = set(re.findall(r'data-i18n(?:-placeholder|-title)?="([\w.]+)"', html))
 # (?<![\w.]) để không dính vào createElement("a") hay closest("tr").
@@ -186,7 +186,7 @@ used |= {f"signal.{name}" for name in ("High", "Medium", "Low", "None")}
 CRM_GROUPS = {
     "status": ("new", "contacted", "meeting", "proposal", "negotiation", "won", "lost", "hold"),
     "rank": ("staff", "assistant", "manager", "deputy", "general", "director", "md", "evp", "svp", "ceo", "cto", "cio", "other"),
-    "source": ("scanner", "referral", "exhibition", "linkedin", "wanted", "saramin", "jobkorea", "coldcall", "website", "naver", "other"),
+    "source": ("scanner", "referral", "exhibition", "linkedin", "wanted", "saramin", "jobkorea", "coldcall", "website", "naver", "customer", "other"),
     "project": ("dispatch", "contract", "si", "sm", "odc", "other"),
     "size": ("enterprise", "midsize", "sme", "startup", "public"),
     "lost": ("price", "schedule", "competitor", "inhouse", "budget", "language", "other"),
@@ -198,6 +198,18 @@ CRM_GROUPS = {
 }
 used |= {"result.hint.image", "result.hint.form"}   # t("result.hint." + hint.type)
 used |= {f"batch.status.{name}" for name in ("waiting", "running", "done", "saved", "error", "stopped")}
+# customers.js: label(group, code) -> t("<prefix>.<code>")
+CUST_GROUPS = {
+    "cust.status": ("active", "completed", "renewed", "terminated"),
+    "cust.pay": ("monthly", "milestone", "quarterly", "upfront", "other"),
+    "cust.stars": ("5", "4", "3", "2", "1"),
+    "cust.grade": ("S", "A", "B", "C"),
+    "cust.gradeWhy": ("S", "A", "B", "C"),
+    "cust.error": ("company_required", "amount_required", "dates_invalid"),
+}
+for prefix, codes in CUST_GROUPS.items():
+    used |= {f"{prefix}.{code}" for code in codes}
+used |= set(re.findall(r'\["\w+", "(cust\.[\w.]+)"\]', read("customers.js")))
 for group, codes in CRM_GROUPS.items():
     used |= {f"crm.{group}.{code}" for code in codes}
 # EXPORT_FIELDS trong crm.js: [["company_name", "crm.form.company"], ...] -> t(key) luc xuat file
@@ -218,7 +230,7 @@ else:
 # -- Còn chuỗi tiếng Việt viết thẳng không ---------------------------------
 
 print("chuoi con sot")
-for name in ("index.html", "saved.html", "crm.html"):
+for name in ("index.html", "saved.html", "crm.html", "customers.html"):
     body = re.sub(r"<!--.*?-->", "", read(name), flags=re.S)
     leftovers = [line.strip() for line in body.splitlines() if VIETNAMESE_CHARS.search(line)]
     if leftovers:
@@ -226,7 +238,7 @@ for name in ("index.html", "saved.html", "crm.html"):
     else:
         ok(f"{name} khong con chuoi tieng Viet")
 
-for name in ("app.js", "crm.js"):
+for name in ("app.js", "crm.js", "customers.js"):
     leftovers = [text for text in string_literals(read(name)) if VIETNAMESE_CHARS.search(text)]
     if leftovers:
         fail(f"{name} con chuoi tieng Viet hien thi: {leftovers[:5]}")
