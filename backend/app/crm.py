@@ -497,14 +497,16 @@ def lead_from_company(saved: dict) -> dict:
     company = result.get("company") or {}
     contacts = result.get("key_contacts") or []
     first = contacts[0] if contacts else {}
+    ceo = company.get("ceo") or saved.get("ceo")
     return {
         "company_id": saved.get("id"),
         "domain": saved.get("domain"),
         "company_name": company.get("name") or saved.get("name") or saved.get("domain") or "",
         "website": company.get("website") or saved.get("website"),
         "industry": company.get("industry") or saved.get("industry"),
-        "contact_name": first.get("name"),
-        "rank": first.get("position"),
+        "biz_number": company.get("biz_number") or saved.get("biz_number"),
+        "contact_name": first.get("name") or ceo,
+        "rank": first.get("position") or ("대표이사" if ceo else None),
         "phone": company.get("phone") or saved.get("phone"),
         "email": company.get("email") or saved.get("email"),
         "source": "scanner",
@@ -835,6 +837,52 @@ def import_leads(filename: str, content_base64: str, commit: bool) -> dict:
         "preview": preview,
         "inserted": inserted,
     }
+
+
+def calendar_ics() -> str:
+    """Lịch .ics: một sự kiện cả ngày cho mỗi lead đang mở có ngày hành động tiếp.
+
+    Nhập vào Google/Naver Calendar/Outlook để được nhắc mà không cần mở app.
+    """
+    def escape(text: str) -> str:
+        return (text or "").replace("\\", "\\\\").replace(";", "\\;").replace(",", "\\,").replace("\n", "\\n")
+
+    stamp = datetime.now(timezone.utc).strftime("%Y%m%dT%H%M%SZ")
+    lines = ["BEGIN:VCALENDAR", "VERSION:2.0", "PRODID:-//Company Scanner//CRM//KO", "CALSCALE:GREGORIAN",
+             "X-WR-CALNAME:CRM 리드 일정"]
+    for lead in list_leads():
+        if not lead.get("next_date") or lead["status"] not in OPEN_STATUSES:
+            continue
+        day = lead["next_date"].replace("-", "")
+        summary = f"[CRM] {lead['company_name']}" + (f" — {lead['next_action']}" if lead.get("next_action") else "")
+        details = [part for part in (
+            lead.get("contact_name"), lead.get("mobile") or lead.get("phone"), lead.get("email"), lead.get("memo"),
+        ) if part]
+        lines += [
+            "BEGIN:VEVENT",
+            f"UID:lead-{lead['id']}@company-scanner",
+            f"DTSTAMP:{stamp}",
+            f"DTSTART;VALUE=DATE:{day}",
+            f"SUMMARY:{escape(summary)}",
+            f"DESCRIPTION:{escape(chr(10).join(details))}",
+            "END:VEVENT",
+        ]
+    lines.append("END:VCALENDAR")
+    return "\r\n".join(_fold(line) for line in lines) + "\r\n"
+
+
+def _fold(line: str, limit: int = 74) -> str:
+    """RFC 5545: dong dai hon 75 octet phai ngat bang CRLF + space (dem theo byte UTF-8)."""
+    parts, current, size = [], "", 0
+    for char in line:
+        width = len(char.encode("utf-8"))
+        if size + width > limit:
+            parts.append(current)
+            current, size = " " + char, 1 + width
+        else:
+            current, size = current + char, size + width
+    parts.append(current)
+    return "\r\n".join(parts)
 
 
 def sample_csv() -> str:

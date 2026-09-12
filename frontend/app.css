@@ -4,6 +4,7 @@
 
 .grid-cols-2 { grid-template-columns: repeat(2, minmax(0, 1fr)); }
 .break-all { word-break: break-all; }
+.tile-wide { grid-column: 1 / -1; }
 .underline { text-decoration-line: underline; }
 .cursor-pointer { cursor: pointer; }
 .list-none { list-style: none; }
@@ -65,6 +66,7 @@
 .saved-table tbody tr:last-child td { border-bottom: none; }
 
 .saved-name { font-weight: 600; }
+.saved-sub { font-weight: 400; font-size: 11px; color: #64748b; margin-top: 1px; }
 
 /* Dia chi / linh vuc / website thuong dai; cat bot de bang khong tran ngang.
    Do rong dat rieng tung cot de ca bang vua khung 1120px. */
@@ -75,12 +77,13 @@
   text-overflow: ellipsis;
   white-space: nowrap;
 }
-.saved-table td:nth-child(2) .saved-truncate { max-width: 145px; }   /* dia chi */
-.saved-table td:nth-child(4) .saved-truncate { max-width: 165px; }   /* email */
-.saved-table td:nth-child(5) .saved-truncate { max-width: 115px; }   /* linh vuc */
-.saved-table td:nth-child(6) .saved-truncate { max-width: 125px; }   /* website */
-.saved-table td:first-child { max-width: 175px; overflow: hidden; text-overflow: ellipsis; }
-.saved-table th, .saved-table td { padding-left: 9px; padding-right: 9px; }
+.saved-table td:nth-child(2) .saved-truncate { max-width: 110px; }   /* dia chi */
+.saved-table td:nth-child(4) .saved-truncate { max-width: 112px; }   /* email */
+.saved-table td:nth-child(5) .saved-truncate { max-width: 95px; }   /* linh vuc */
+.saved-table td:nth-child(6) .saved-truncate { max-width: 95px; }   /* website */
+.saved-table td:first-child { max-width: 150px; overflow: hidden; text-overflow: ellipsis; }
+.saved-table th, .saved-table td { padding-left: 7px; padding-right: 7px; }
+.saved-table tbody tr { cursor: pointer; }
 .saved-date { color: #64748b; font-size: 12px; }
 
 /* Cot nut dinh ben phai: du du lieu dai den dau, "Xem"/"Xoa" van luon thay. */
@@ -109,6 +112,7 @@
   color: #0f172a;
 }
 .saved-btn:hover { background: #f1f5f9; }
+.saved-btn-icon { width: 28px; padding: 0; display: inline-flex; align-items: center; justify-content: center; }
 .saved-btn-danger:hover { background: #fff1f2; border-color: #fecdd3; color: #be123c; }
 
 .saved-pill {
@@ -127,6 +131,12 @@
 .saved-pill-none { background: #f1f5f9; border-color: #e2e8f0; color: #64748b; }
 
 .saved-empty { padding: 16px 12px; color: #94a3b8; font-style: italic; font-size: 13px; }
+
+/* Xu huong so tin IT so voi lan quet truoc */
+.saved-trend { display: inline-flex; align-items: center; height: 20px; padding: 0 6px; margin-left: 5px; border-radius: 999px; font-size: 11px; font-weight: 700; }
+.saved-trend-up { background: #ecfdf5; color: #047857; }
+.saved-trend-down { background: #fff1f2; color: #be123c; }
+.saved-toggle-active { background: #ecfdf5 !important; border-color: #a7f3d0 !important; color: #047857; }
 
 /* --- Tab bar -------------------------------------------------------------- */
 
@@ -622,6 +632,22 @@
 .crm-score-box.hidden { display: none; }
 .crm-score-why { font-size: 11px; color: #64748b; font-weight: 600; max-width: 320px; line-height: 1.3; }
 .crm-score-why small { font-weight: 400; display: block; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+
+/* --- Mau email ---------------------------------------------------------------- */
+
+.crm-mail { margin-top: 20px; padding-top: 16px; border-top: 1px solid #f1f5f9; display: flex; flex-direction: column; gap: 10px; }
+.crm-mail.hidden { display: none; }
+.crm-mail-head { display: flex; align-items: center; justify-content: space-between; }
+.crm-mail-head h4 { font-size: 13px; font-weight: 700; }
+.crm-mail-field { display: flex; flex-direction: column; gap: 4px; font-size: 12px; font-weight: 600; color: #334155; }
+.crm-mail-field input, .crm-mail-field textarea {
+  width: 100%; padding: 8px 11px; border-radius: 10px; border: 1px solid #e2e8f0; font-size: 13px; font-weight: 400;
+  color: #0f172a; outline: none; font-family: inherit; line-height: 1.5; resize: vertical;
+}
+.crm-mail-field input:focus, .crm-mail-field textarea:focus { border-color: #3b82f6; }
+#lead-mail-btn { background: none; border: none; padding: 0; font-family: inherit; }
+.crm-mail .crm-btn-primary { text-decoration: none; }
+.crm-mail .crm-btn-primary.hidden { display: none; }
 
 /* --- Hoat dong ------------------------------------------------------------- */
 

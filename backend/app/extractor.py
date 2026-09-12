@@ -73,6 +73,13 @@ ENGLISH_ADDRESS_RE = re.compile(
 )
 
 PHONE_LABELS = ("대표전화", "대표번호", "전화번호", "전화", "연락처", "tel", "phone", "t.")
+
+# 전자상거래법 buộc website Hàn ghi 사업자등록번호 và 대표자 ở footer, nên hai
+# trường này gần như luôn có và luôn nằm trong footer.
+BIZ_NUMBER_LABELS = ("사업자등록번호", "사업자 등록번호", "사업자등록 번호", "사업자번호",
+                     "business registration number", "business registration no", "business license")
+BIZ_NUMBER_RE = re.compile(r"(\d{3})\s*-?\s*(\d{2})\s*-?\s*(\d{5})(?!\d)")
+CEO_LABELS = ("대표이사", "대표자", "대표자명", "대표", "ceo", "representative")
 FAX_LABELS = ("팩스", "fax", "f.")
 
 # The lookarounds matter: without them a run of years ("2010 2019 2000")
@@ -512,6 +519,40 @@ def extract_phone(crawl: CrawlResult) -> Evidence | None:
         if unlabelled:
             landline = next((p for p in unlabelled if not p.startswith("010")), None)
             return Evidence(landline or unlabelled[0], source_url)
+    return None
+
+
+def extract_biz_number(crawl: CrawlResult) -> Evidence | None:
+    """사업자등록번호 000-00-00000 sau nhãn, footer trước."""
+    for text, source_url in _text_sources(crawl, ("contact", "company", "home")):
+        for label in BIZ_NUMBER_LABELS:
+            pattern = re.compile(re.escape(label) + r"\s*[:：]?\s*(?:\[\s*)?" + BIZ_NUMBER_RE.pattern, re.I)
+            match = pattern.search(text)
+            if match:
+                return Evidence(f"{match.group(1)}-{match.group(2)}-{match.group(3)}", source_url)
+    return None
+
+
+def extract_ceo(crawl: CrawlResult) -> Evidence | None:
+    """대표자 ghi sau nhãn (대표 : 홍길동) trong footer / trang công ty.
+
+    Khác với key contacts (đọc thân trang, cần dòng ngắn), ở đây chỉ nhận
+    dạng có dấu hai chấm hoặc nhãn 대표자/대표이사 đứng ngay trước tên, vì footer
+    thường là một dòng dài "상호 : A | 대표 : B | 사업자등록번호 : C".
+    """
+    name_alternation = f"(?:{KOREAN_NAME_RE}|{ENGLISH_NAME_RE})"
+    for text, source_url in _text_sources(crawl, ("contact", "company", "home")):
+        for label in CEO_LABELS:
+            needs_colon = label in ("대표", "ceo")
+            separator = r"\s*[:：]\s*" if needs_colon else r"\s*[:：]?\s*"
+            pattern = re.compile(
+                r"(?<![가-힣A-Za-z])" + re.escape(label) + separator + rf"(?P<name>{name_alternation})(?![가-힣])",
+                re.I,
+            )
+            for match in pattern.finditer(text):
+                name = match.group("name").strip()
+                if _plausible_name(name):
+                    return Evidence(re.sub(r"\s+", " ", name), source_url)
     return None
 
 
@@ -974,8 +1015,17 @@ def build_result(crawl: CrawlResult) -> dict:
     phone = extract_phone(crawl)
     email = extract_email(crawl)
     industry = extract_industry(crawl)
+    biz_number = extract_biz_number(crawl)
+    ceo = extract_ceo(crawl)
     contacts = extract_key_contacts(crawl, company["name"])
     jobs = extract_it_jobs(crawl)
+
+    # 대표 trong footer là người có thật của công ty; nếu key contacts còn
+    # trống chỗ và chưa có người này thì bổ sung, xếp sau CTO/CIO đã tìm được.
+    if ceo and len(contacts) < 3:
+        compact = re.sub(r"\s+", "", ceo.value).lower()
+        if not any(re.sub(r"\s+", "", c["name"]).lower() == compact for c in contacts):
+            contacts.append({"name": ceo.value, "position": "대표", "source_url": ceo.source_url})
 
     home = crawl.pages[0].final_url if crawl.pages else crawl.start_url
 
@@ -986,6 +1036,8 @@ def build_result(crawl: CrawlResult) -> dict:
             "phone": phone.value if phone else NOT_FOUND,
             "email": email.value if email else NOT_FOUND,
             "industry": industry.value if industry else NOT_FOUND,
+            "biz_number": biz_number.value if biz_number else NOT_FOUND,
+            "ceo": ceo.value if ceo else NOT_FOUND,
             "website": home,
         },
         "company_sources": {
@@ -994,6 +1046,8 @@ def build_result(crawl: CrawlResult) -> dict:
             "phone": phone.source_url if phone else NOT_FOUND,
             "email": email.source_url if email else NOT_FOUND,
             "industry": industry.source_url if industry else NOT_FOUND,
+            "biz_number": biz_number.source_url if biz_number else NOT_FOUND,
+            "ceo": ceo.source_url if ceo else NOT_FOUND,
         },
         "key_contacts": contacts,
         "it_recruitment": jobs,

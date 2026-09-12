@@ -246,6 +246,16 @@ def lead_sample_csv() -> PlainTextResponse:
     )
 
 
+@app.get("/api/leads/calendar.ics")
+def lead_calendar() -> PlainTextResponse:
+    """Ngay hanh dong tiep cua cac lead dang mo, dang iCalendar."""
+    return PlainTextResponse(
+        crm.calendar_ics(),
+        media_type="text/calendar; charset=utf-8",
+        headers={"Content-Disposition": 'attachment; filename="crm_leads.ics"'},
+    )
+
+
 @app.post("/api/leads/import")
 def lead_import(payload: ImportPayload) -> JSONResponse:
     """commit=false: xem truoc (hop le / trung / loi). commit=true: ghi vao DB."""

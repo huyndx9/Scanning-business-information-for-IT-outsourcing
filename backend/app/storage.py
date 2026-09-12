@@ -27,6 +27,8 @@ CREATE TABLE IF NOT EXISTS companies (
     phone       TEXT,
     email       TEXT,
     industry    TEXT,
+    biz_number  TEXT,
+    ceo         TEXT,
     website     TEXT,
     it_hiring   TEXT    NOT NULL DEFAULT 'None',
     it_jobs     INTEGER NOT NULL DEFAULT 0,
@@ -35,12 +37,27 @@ CREATE TABLE IF NOT EXISTS companies (
     created_at  TEXT    NOT NULL,
     updated_at  TEXT    NOT NULL
 );
+-- Moi lan luu (ke ca quet lai) ghi mot dong: so tin tuyen IT tang vot giua hai
+-- lan quet la tin hieu mua manh hon bat ky truong tinh nao.
+CREATE TABLE IF NOT EXISTS scan_history (
+    id          INTEGER PRIMARY KEY AUTOINCREMENT,
+    domain      TEXT    NOT NULL,
+    scanned_at  TEXT    NOT NULL,
+    it_hiring   TEXT    NOT NULL,
+    it_jobs     INTEGER NOT NULL,
+    contacts    INTEGER NOT NULL,
+    has_email   INTEGER NOT NULL DEFAULT 0,
+    has_phone   INTEGER NOT NULL DEFAULT 0
+);
+CREATE INDEX IF NOT EXISTS scan_history_domain ON scan_history(domain, scanned_at);
 """
 
 
 # Cot them vao sau khi da co DB dang chay: ten -> kieu.
 MIGRATIONS = {
     "email": "TEXT",
+    "biz_number": "TEXT",
+    "ceo": "TEXT",
 }
 
 
@@ -90,6 +107,8 @@ def _summary(row: sqlite3.Row) -> dict:
         "phone": row["phone"],
         "email": row["email"],
         "industry": row["industry"],
+        "biz_number": row["biz_number"],
+        "ceo": row["ceo"],
         "website": row["website"],
         "it_hiring": row["it_hiring"],
         "it_jobs": row["it_jobs"],
@@ -115,15 +134,17 @@ def save_result(result: dict) -> dict:
         _ensure_schema(connection)
         connection.execute(
             """
-            INSERT INTO companies (domain, name, address, phone, email, industry, website,
+            INSERT INTO companies (domain, name, address, phone, email, industry, biz_number, ceo, website,
                                    it_hiring, it_jobs, contacts, result_json, created_at, updated_at)
-            VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+            VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
             ON CONFLICT(domain) DO UPDATE SET
                 name = excluded.name,
                 address = excluded.address,
                 phone = excluded.phone,
                 email = excluded.email,
                 industry = excluded.industry,
+                biz_number = excluded.biz_number,
+                ceo = excluded.ceo,
                 website = excluded.website,
                 it_hiring = excluded.it_hiring,
                 it_jobs = excluded.it_jobs,
@@ -138,6 +159,8 @@ def save_result(result: dict) -> dict:
                 company.get("phone"),
                 company.get("email"),
                 company.get("industry"),
+                company.get("biz_number"),
+                company.get("ceo"),
                 company.get("website"),
                 signal,
                 jobs,
@@ -147,8 +170,53 @@ def save_result(result: dict) -> dict:
                 now,
             ),
         )
+        connection.execute(
+            """
+            INSERT INTO scan_history (domain, scanned_at, it_hiring, it_jobs, contacts, has_email, has_phone)
+            VALUES (?, ?, ?, ?, ?, ?, ?)
+            """,
+            (domain, now, signal, jobs, contacts, int(bool(company.get("email"))), int(bool(company.get("phone")))),
+        )
         row = connection.execute("SELECT * FROM companies WHERE domain = ?", (domain,)).fetchone()
-    return _summary(row)
+        previous = _previous_scans(connection)
+    summary = _summary(row)
+    summary.update(_trend(summary, previous.get(domain)))
+    return summary
+
+
+def _previous_scans(connection: sqlite3.Connection) -> dict[str, sqlite3.Row]:
+    """Lan quet ngay truoc lan moi nhat, theo domain (dong thu 2 khi xep moi -> cu)."""
+    rows = connection.execute(
+        """
+        SELECT domain, it_jobs, it_hiring, scanned_at FROM (
+            SELECT domain, it_jobs, it_hiring, scanned_at,
+                   ROW_NUMBER() OVER (PARTITION BY domain ORDER BY scanned_at DESC, id DESC) AS rn
+            FROM scan_history
+        ) WHERE rn = 2
+        """
+    ).fetchall()
+    return {row["domain"]: row for row in rows}
+
+
+def _trend(summary: dict, previous: sqlite3.Row | None) -> dict:
+    """So tin IT thay doi so voi lan quet truoc; None khi moi quet lan dau."""
+    if previous is None:
+        return {"prev_it_jobs": None, "jobs_delta": None, "prev_scanned_at": None}
+    return {
+        "prev_it_jobs": previous["it_jobs"],
+        "jobs_delta": (summary.get("it_jobs") or 0) - previous["it_jobs"],
+        "prev_scanned_at": previous["scanned_at"],
+    }
+
+
+def scan_history(domain: str, limit: int = 12) -> list[dict]:
+    with closing(connect()) as connection, connection:
+        _ensure_schema(connection)
+        rows = connection.execute(
+            "SELECT scanned_at, it_hiring, it_jobs, contacts FROM scan_history WHERE domain = ? "
+            "ORDER BY scanned_at DESC, id DESC LIMIT ?", (domain, limit),
+        ).fetchall()
+    return [dict(row) for row in rows]
 
 
 def list_companies(include_results: bool = False) -> list[dict]:
@@ -157,10 +225,12 @@ def list_companies(include_results: bool = False) -> list[dict]:
     with closing(connect()) as connection, connection:
         _ensure_schema(connection)
         rows = connection.execute("SELECT * FROM companies ORDER BY updated_at DESC, id DESC").fetchall()
+        previous = _previous_scans(connection)
 
     companies = []
     for row in rows:
         summary = _summary(row)
+        summary.update(_trend(summary, previous.get(row["domain"])))
         if include_results:
             try:
                 summary["result"] = json.loads(row["result_json"])
@@ -175,9 +245,12 @@ def get_company(company_id: int) -> dict | None:
     with closing(connect()) as connection, connection:
         _ensure_schema(connection)
         row = connection.execute("SELECT * FROM companies WHERE id = ?", (company_id,)).fetchone()
+        previous = _previous_scans(connection) if row is not None else {}
     if row is None:
         return None
     summary = _summary(row)
+    summary.update(_trend(summary, previous.get(row["domain"])))
+    summary["history"] = scan_history(row["domain"])
     try:
         summary["result"] = json.loads(row["result_json"])
     except json.JSONDecodeError:

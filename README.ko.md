@@ -35,8 +35,11 @@ URL을 입력하면 앱이 실제로 해당 웹사이트에 접속해 회사 소
 
 ![기업 정보와 주요 담당자](docs/screenshots/03-result-company-contacts.png)
 
-기업명, 본사 주소, 전화번호, 이메일, 사업 분야 — 각 항목에 해당 정보가 있는 페이지로
-연결되는 **출처** 링크가 붙어 있어 영업 담당자가 연락 전에 확인할 수 있습니다.
+기업명, 본사 주소, 전화번호, 이메일, 사업 분야, **사업자등록번호**, **대표자** — 각
+항목에 해당 정보가 있는 페이지로 연결되는 **출처** 링크가 붙어 있어 영업 담당자가
+연락 전에 확인할 수 있습니다. 마지막 두 항목은 푸터에서 가져옵니다. 전자상거래법상
+한국 웹사이트는 푸터에 사업자등록번호와 대표자를 표기해야 하므로 거의 모든 사이트에
+있습니다. 찾은 대표자는 주요 담당자에 자리가 남아 있으면 자동으로 추가됩니다.
 오른쪽은 IT 의사결정에 관여하는 담당자 최대 3명으로, CTO → CIO → IT/개발 책임자 →
 CEO 순으로 우선합니다. 데이터가 없으면 `찾을 수 없음`으로 표시하고, 추측하거나 다른
 회사 정보로 채우지 않습니다.
@@ -76,8 +79,15 @@ IT/소프트웨어 직무만 최대 10건 수집하며 영업, 회계, 인사는
 ![저장된 기업](docs/screenshots/08-saved-list.png)
 
 별도 페이지 `/saved`에서 저장된 모든 기업을 기업명, 주소, 전화번호, 이메일, 업종,
-웹사이트, IT 채용(건수 포함), 업데이트 날짜와 함께 보여줍니다. **보기**는 다시
-스캔하지 않고 전체 결과를 열고, **삭제**는 확인 후 지웁니다.
+웹사이트, IT 채용(건수 포함), 업데이트 날짜와 함께 보여줍니다. 행(또는 눈 아이콘)을
+누르면 다시 스캔하지 않고 전체 결과를 열고, ↻는 해당 기업을 바로 **재스캔**하며,
+휴지통은 확인 후 삭제합니다.
+
+저장할 때마다 이력이 한 줄씩 쌓입니다. 재스캔에서 IT 채용 공고가 늘어나면 IT 채용
+열에 **▲ +N**(줄면 ▼)이 표시되고, **▲ IT 채용 증가** 버튼으로 늘어난 기업만 볼 수
+있습니다 — IT 채용이 2건에서 8건으로 늘어난 회사는 곧 인력이 필요한 회사이며, 이것이
+스캐너가 줄 수 있는 가장 분명한 구매 신호입니다. 전체 재스캔은
+`backend/rescan_cli.py`로 정기 실행합니다("명령줄에서 스캔" 참고).
 
 ### 9. 검색과 Excel / JSON 내보내기
 
@@ -131,6 +141,15 @@ IT/소프트웨어 직무만 최대 10건 수집하며 영업, 회계, 인사는
 **산출 근거**를 바로 보여줍니다 — 무작위 숫자가 없습니다. 아래 **활동 기록**(전화,
 이메일, 카카오톡, 미팅, 제안서/견적서 발송)에 한 줄 남기면 마지막 접촉일이 자동
 갱신됩니다.
+
+![메일 초안](docs/screenshots/16-crm-mail.png)
+
+**메일 초안** 버튼은 리드 데이터로 한국어 메일을 바로 작성합니다. 3가지 템플릿(첫
+제안 / 미팅 후 팔로업 / 견적서 발송)에 회사명, `담당자 직급님`, 기술스택, 필요 인원,
+사업 유형, 발주 예정 월, 내 서명(브라우저에 저장)이 자동으로 들어갑니다. 복사하거나
+수신자가 채워진 상태로 메일 앱에서 바로 열 수 있습니다. 내보내기 메뉴의 **캘린더
+.ics**를 Google/Naver 캘린더나 Outlook에 넣으면 앱을 열지 않아도 "다음 액션" 알림을
+받습니다.
 
 ### 14. 드래그 앤 드롭 칸반
 
@@ -220,6 +239,21 @@ python backend/scan_cli.py https://www.hyperinfo.co.kr
 
 API가 반환하는 것과 동일한 JSON을 출력하며, 크롤링 진행 상황은 stderr로 표시됩니다.
 
+### 정기 재스캔 / 일괄 스캔
+
+```bash
+python backend/rescan_cli.py                 # 저장된 기업 전체 재스캔
+python backend/rescan_cli.py --days 7        # 7일 이상 스캔하지 않은 기업만
+python backend/rescan_cli.py --urls list.txt # 파일의 URL을 한 줄씩 스캔 + 저장
+```
+
+사이트 사이에 2초 쉬며 순차로 스캔해 데이터베이스에 바로 저장하고, 이전 스캔 대비
+▲/▼ 표를 출력한 뒤 IT 채용이 늘어난 기업만 따로 정리합니다. Windows에서 매주 자동
+실행하려면 작업 스케줄러 → 기본 작업 만들기 → 매주 → 동작 "프로그램 시작", 프로그램
+`python`, 인수 `backend\rescan_cli.py`, 시작 위치는 프로젝트 폴더로 지정합니다.
+월요일 아침 "저장된 기업"에서 **▲ IT 채용 증가**를 누르면 누가 채용을 늘렸는지 바로
+보입니다.
+
 ## 테스트
 
 ```bash
@@ -235,11 +269,12 @@ python backend/test_scanner.py
 backend/app/security.py    URL 검사, localhost / 사설 IP / 메타데이터 IP 차단
 backend/app/crawler.py     실제 크롤링: fetch, 인코딩, 도메인 격리, Playwright
 backend/app/extractor.py   기업 / 주요 담당자 / IT 채용 정보 추출
-backend/app/storage.py     SQLite: 저장 / 목록 / 다시 열기 / 삭제
+backend/app/storage.py     SQLite: 저장 / 목록 / 다시 열기 / 삭제, 스캔 이력(scan_history)
 backend/app/crm.py         CRM: 리드, 점수 계산, CSV/JSON(CP949) 가져오기, 활동 기록
 backend/app/main.py        FastAPI: /api/scan, /api/scan/stream (SSE), /api/companies, /api/leads, 3개 페이지
 start.py                   실행기: 환경 확인, 포트 선택, 브라우저 열기
 backend/scan_cli.py        터미널에서 스캔
+backend/rescan_cli.py      정기 재스캔 / URL 파일 일괄 스캔, 이력 기록
 backend/test_scanner.py    오프라인 테스트
 backend/check_i18n.py      번역 검사
 backend/take_screenshots.py README용 실제 화면 캡처 (Playwright)
@@ -343,7 +378,7 @@ frontend/app.css           프로토타입에 없던 클래스 보완 (IT 채용
 | POST | `/api/companies` | 스캔 결과 저장(본문 `{"result": {...}}`), 도메인 기준 upsert |
 | GET | `/api/companies` | 요약 목록, 최근 갱신 순 |
 | GET | `/api/companies?full=1` | 위와 동일 + 전체 스캔 결과(JSON 내보내기용) |
-| GET | `/api/companies/{id}` | 요약 + 저장된 전체 스캔 결과 |
+| GET | `/api/companies/{id}` | 요약 + 저장된 전체 스캔 결과 + 스캔 `history` |
 | DELETE | `/api/companies/{id}` | 기업 한 건 삭제 |
 
 CRM:
@@ -359,6 +394,7 @@ CRM:
 | POST | `/api/leads/from-company/{company_id}` | 스캔한 기업에서 리드 생성; 이미 있으면 기존 리드 반환 |
 | POST | `/api/leads/import` | Body `{"filename", "content_base64", "commit"}`; `commit=false`는 미리보기만 |
 | GET | `/api/leads/sample.csv` | 가져오기가 인식하는 열로 된 샘플 CSV |
+| GET | `/api/leads/calendar.ics` | iCalendar: "다음 액션 날짜"가 있는 진행 중 리드마다 종일 일정 하나 |
 | POST | `/api/leads/{id}/activities` | 활동 기록 `{"activity": {"type", "at", "note"}}`, 마지막 접촉일 갱신 |
 | DELETE | `/api/activities/{id}` | 활동 한 건 삭제 |
 

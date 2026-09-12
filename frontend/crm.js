@@ -463,6 +463,8 @@
     naver.classList.remove("hidden");
     naver.href = `https://search.naver.com/search.naver?query=${encodeURIComponent(editing.company_name)}`;
     $("lead-activities").classList.remove("hidden");
+    $("lead-mail-btn").classList.remove("hidden");
+    mailPanel.classList.add("hidden");
     $("lead-last-contact").textContent = editing.last_contact ? t("crm.activity.lastContact", { date: editing.last_contact }) : "";
     $("activity-form").elements.at.value = todayIso();
     renderActivities(editing.activities);
@@ -479,6 +481,8 @@
     $("lead-delete").classList.add("hidden");
     $("lead-scan-link").classList.add("hidden");
     $("lead-naver-link").classList.add("hidden");
+    $("lead-mail-btn").classList.add("hidden");
+    mailPanel.classList.add("hidden");
     $("lead-activities").classList.add("hidden");
     showModal("lead-modal");
     form.elements.company_name.focus();
@@ -545,6 +549,70 @@
       await api(`/api/activities/${button.dataset.deleteActivity}`, { method: "DELETE" });
       editing = await api(`/api/leads/${editing.id}`);
       renderActivities(editing.activities);
+    } catch (_) {
+      toast(t("crm.error.saveFailed"), "error");
+    }
+  });
+
+  // -- Mẫu email ------------------------------------------------------------------
+  // Người nhận là người Hàn nên nội dung luôn tiếng Hàn, chỉ nhãn nút đổi theo UI.
+
+  const SIGNATURE_KEY = "company-scanner-mail-signature";
+  const mailPanel = $("lead-mail");
+  const mailSignature = $("mail-signature");
+
+  function fill(template, values) {
+    return Object.entries(values).reduce((text, [key, value]) => text.split(`{${key}}`).join(value), template);
+  }
+
+  function mailValues(lead) {
+    const rankKo = lead.rank ? t("crm.rank." + lead.rank).replace(/\s*\(.*\)$/, "") : "";
+    const contact = lead.contact_name
+      ? `${lead.contact_name} ${rankKo || t("crm.mail.defaultRank")}님`
+      : t("crm.mail.defaultContact");
+    const tech = (lead.tech || []).length ? lead.tech.join(", ") : t("crm.mail.defaultTech");
+    const team = lead.team_size ? t("crm.mail.teamSize", { count: lead.team_size }) : "";
+    const start = lead.expected_start ? t("crm.mail.expectedStart", { month: lead.expected_start }) : "";
+    // "스캐터랩 - ScatterLab" -> "스캐터랩": trong thư chỉ gọi một tên.
+    const shortName = (lead.company_name || "").split(/\s+[-|·]\s+/)[0].trim() || lead.company_name;
+    return {
+      company: shortName, contact, tech, team, start,
+      project: lead.project_type ? t("crm.project." + lead.project_type) : t("crm.mail.defaultProject"),
+      signature: mailSignature.value.trim() || t("crm.mail.signatureFallback"),
+    };
+  }
+
+  function renderMail() {
+    if (!editing) return;
+    const kind = $("mail-template").value;
+    const values = mailValues(editing);
+    const subject = fill(t(`crm.mail.subject.${kind}`), values);
+    const body = fill(t(`crm.mail.body.${kind}`), values).replace(/\n{3,}/g, "\n\n");
+    $("mail-subject").value = subject;
+    $("mail-body").value = body;
+    const to = editing.email ? encodeURIComponent(editing.email) : "";
+    $("mail-send").href = `mailto:${to}?subject=${encodeURIComponent(subject)}&body=${encodeURIComponent(body)}`;
+    $("mail-send").classList.toggle("hidden", !editing.email);
+  }
+
+  try { mailSignature.value = localStorage.getItem(SIGNATURE_KEY) || ""; } catch (_) { /* không có localStorage */ }
+  mailSignature.addEventListener("input", () => {
+    try { localStorage.setItem(SIGNATURE_KEY, mailSignature.value); } catch (_) { /* bỏ qua */ }
+    renderMail();
+  });
+  $("mail-template").addEventListener("change", renderMail);
+  $("lead-mail-btn").addEventListener("click", () => {
+    mailPanel.classList.toggle("hidden");
+    if (!mailPanel.classList.contains("hidden")) {
+      renderMail();
+      mailPanel.scrollIntoView({ behavior: "smooth", block: "nearest" });
+    }
+  });
+  $("mail-copy").addEventListener("click", async () => {
+    try {
+      await navigator.clipboard.writeText(`${$("mail-subject").value}\n\n${$("mail-body").value}`);
+      $("mail-copied").classList.remove("hidden");
+      setTimeout(() => $("mail-copied").classList.add("hidden"), 2000);
     } catch (_) {
       toast(t("crm.error.saveFailed"), "error");
     }

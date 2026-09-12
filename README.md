@@ -36,8 +36,11 @@ Events ngay khi crawler chuyển bước, nên đây là tiến trình thật ch
 
 ![Thông tin công ty và key contacts](docs/screenshots/03-result-company-contacts.png)
 
-Tên, địa chỉ trụ sở, điện thoại, email, lĩnh vực — mỗi ô có link **출처** trỏ về đúng
-trang chứa thông tin đó, để sales kiểm chứng trước khi liên hệ. Bên phải là tối đa 3
+Tên, địa chỉ trụ sở, điện thoại, email, lĩnh vực, **사업자등록번호** và **대표자** — mỗi ô
+có link **출처** trỏ về đúng trang chứa thông tin đó, để sales kiểm chứng trước khi liên
+hệ. Hai trường cuối lấy từ footer: luật 전자상거래법 buộc website Hàn ghi mã số doanh
+nghiệp và người đại diện ở đó, nên gần như site nào cũng có. 대표자 tìm được sẽ tự
+bổ sung vào key contacts nếu còn chỗ. Bên phải là tối đa 3
 người phụ trách quyết định IT, ưu tiên CTO → CIO → phụ trách IT/phát triển → CEO.
 Thiếu dữ liệu thì hiển thị `찾을 수 없음`, không đoán, không lấp bằng công ty khác.
 
@@ -76,8 +79,15 @@ dòng cũ chứ không tạo bản trùng.
 ![Danh sách đã lưu](docs/screenshots/08-saved-list.png)
 
 Trang riêng `/saved` liệt kê mọi công ty đã lưu với tên, địa chỉ, điện thoại, email,
-lĩnh vực, website, IT Hiring kèm số lượng, ngày cập nhật. **보기** mở lại toàn bộ kết
-quả mà không phải quét lại; **삭제** xoá sau khi xác nhận.
+lĩnh vực, website, IT Hiring kèm số lượng, ngày cập nhật. Bấm vào dòng (hoặc nút mắt)
+mở lại toàn bộ kết quả mà không phải quét lại; nút ↻ **quét lại** ngay công ty đó; nút
+thùng rác xoá sau khi xác nhận.
+
+Mỗi lần lưu ghi thêm một dòng lịch sử. Quét lại mà số tin tuyển IT tăng thì cột IT
+Hiring hiện **▲ +N** (giảm thì ▼); nút **▲ IT 채용 증가** lọc riêng các công ty đang
+tăng — công ty vừa tăng từ 2 lên 8 tin tuyển IT là công ty sắp cần người, đây là tín
+hiệu mua rõ nhất mà scanner có thể cho. Quét lại toàn bộ theo lịch bằng
+`backend/rescan_cli.py` (xem mục "Quét từ command line").
 
 ### 9. Tìm kiếm và xuất Excel / JSON
 
@@ -132,6 +142,15 @@ quyết định, có email/điện thoại/KakaoTalk, ngân sách, nguồn, 발�
 team) và hiện ngay **cách tính** — không có số ngẫu nhiên. Phía dưới là **nhật ký hoạt
 động** (gọi, email, KakaoTalk, họp, gửi đề xuất/báo giá); ghi một dòng là ngày liên hệ
 gần nhất tự cập nhật.
+
+![Mail nháp](docs/screenshots/16-crm-mail.png)
+
+Nút **메일 초안** soạn sẵn email tiếng Hàn từ dữ liệu lead: 3 mẫu (đề xuất đầu tiên /
+follow-up sau họp / gửi báo giá), tự điền công ty, `담당자 직급님`, tech stack, số nhân
+sự, hình thức dự án, tháng 발주 và chữ ký của bạn (nhớ trong trình duyệt). Copy hoặc
+mở thẳng trong ứng dụng mail với địa chỉ người nhận đã có. Menu Xuất có thêm
+**lịch .ics** — nhập vào Google/Naver Calendar/Outlook để được nhắc "다음 액션" mà
+không cần mở app.
 
 ### 14. Kanban kéo thả
 
@@ -220,6 +239,21 @@ python backend/scan_cli.py https://www.hyperinfo.co.kr
 
 In ra đúng JSON mà API trả về; tiến trình crawl in ở stderr.
 
+### Quét lại định kỳ / quét hàng loạt
+
+```bash
+python backend/rescan_cli.py                 # quét lại mọi công ty đã lưu
+python backend/rescan_cli.py --days 7        # chỉ công ty chưa quét trong 7 ngày
+python backend/rescan_cli.py --urls list.txt # quét + lưu từng URL trong file (mỗi dòng một URL)
+```
+
+Quét tuần tự, nghỉ 2 giây giữa các site, lưu thẳng vào database và in bảng ▲/▼ so với
+lần quét trước; cuối cùng liệt kê riêng các công ty tăng tin tuyển IT. Để chạy tự động
+hàng tuần trên Windows: Task Scheduler → Create Basic Task → Weekly → Action
+"Start a program", Program `python`, Arguments `backend\rescan_cli.py`, Start in
+thư mục dự án. Sáng thứ Hai mở trang "Công ty đã lưu", bấm **▲ IT 채용 증가** là thấy
+ai đang tuyển thêm.
+
 ## Chạy test
 
 ```bash
@@ -235,11 +269,12 @@ lọc key contacts / tin tuyển dụng IT, và trường hợp không có dữ 
 backend/app/security.py    Kiểm tra URL, chặn localhost / private IP / metadata IP
 backend/app/crawler.py     Crawl thật: fetch, encoding, domain isolation, Playwright
 backend/app/extractor.py   Trích xuất công ty / key contacts / tuyển dụng IT
-backend/app/storage.py     SQLite: luu / liet ke / mo lai / xoa cong ty
+backend/app/storage.py     SQLite: luu / liet ke / mo lai / xoa cong ty, lich su quet (scan_history)
 backend/app/crm.py         CRM: lead, chấm điểm, nhập CSV/JSON (CP949), nhật ký hoạt động
 backend/app/main.py        FastAPI: /api/scan, /api/scan/stream (SSE), /api/companies, /api/leads, 3 trang
 start.py                   Launcher: kiểm tra môi trường, chọn port, mở trình duyệt
 backend/scan_cli.py        Quét từ terminal
+backend/rescan_cli.py      Quét lại định kỳ / quét hàng loạt từ file URL, ghi lịch sử
 backend/test_scanner.py    Test offline
 backend/check_i18n.py      Kiểm tra bản dịch
 backend/take_screenshots.py Chụp ảnh thật của app cho README (Playwright)
@@ -344,7 +379,7 @@ Các endpoint của database:
 | POST | `/api/companies` | Lưu kết quả scan (body `{"result": {...}}`), upsert theo domain |
 | GET | `/api/companies` | Danh sách tóm tắt, mới cập nhật xếp trước |
 | GET | `/api/companies?full=1` | Như trên, kèm toàn bộ kết quả scan (dùng khi xuất JSON) |
-| GET | `/api/companies/{id}` | Tóm tắt + toàn bộ kết quả scan đã lưu |
+| GET | `/api/companies/{id}` | Tóm tắt + toàn bộ kết quả scan đã lưu + `history` các lần quét |
 | DELETE | `/api/companies/{id}` | Xoá một công ty |
 
 CRM:
@@ -360,6 +395,7 @@ CRM:
 | POST | `/api/leads/from-company/{company_id}` | Tạo lead điền sẵn từ công ty đã quét; đã có thì trả lead cũ |
 | POST | `/api/leads/import` | Body `{"filename", "content_base64", "commit"}`; `commit=false` chỉ xem trước |
 | GET | `/api/leads/sample.csv` | CSV mẫu đúng cột import hiểu |
+| GET | `/api/leads/calendar.ics` | Lịch iCalendar: một sự kiện cả ngày cho mỗi lead đang mở có "다음 액션 날짜" |
 | POST | `/api/leads/{id}/activities` | Ghi hoạt động `{"activity": {"type", "at", "note"}}`, cập nhật liên hệ gần nhất |
 | DELETE | `/api/activities/{id}` | Xoá một hoạt động |
 

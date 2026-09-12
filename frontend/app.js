@@ -39,6 +39,8 @@ const ICONS = {
   plus: '<path d="M5 12h14"/><path d="M12 5v14"/>',
   x: '<path d="M18 6 6 18"/><path d="m6 6 12 12"/>',
   trash: '<path d="M3 6h18"/><path d="M19 6v14c0 1-1 2-2 2H7c-1 0-2-1-2-2V6"/><path d="M8 6V4c0-1 1-2 2-2h4c1 0 2 1 2 2v2"/>',
+  refresh: '<path d="M3 12a9 9 0 0 1 9-9 9.75 9.75 0 0 1 6.74 2.74L21 8"/><path d="M21 3v5h-5"/><path d="M21 12a9 9 0 0 1-9 9 9.75 9.75 0 0 1-6.74-2.74L3 16"/><path d="M8 16H3v5"/>',
+  eye: '<path d="M2.062 12.348a1 1 0 0 1 0-.696 10.75 10.75 0 0 1 19.876 0 1 1 0 0 1 0 .696 10.75 10.75 0 0 1-19.876 0"/><circle cx="12" cy="12" r="3"/>',
   userplus: '<path d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><line x1="19" x2="19" y1="8" y2="14"/><line x1="22" x2="16" y1="11" y2="11"/>',
 };
 
@@ -231,8 +233,8 @@ if (isScanPage) {
     return value.slice(0, 2).toUpperCase();
   }
 
-  function infoTile(iconName, label, value, source) {
-    return `<div class="rounded-xl bg-slate-50 border border-slate-200 p-3.5">
+  function infoTile(iconName, label, value, source, wide = false) {
+    return `<div class="rounded-xl bg-slate-50 border border-slate-200 p-3.5 ${wide ? "tile-wide" : ""}">
       <div class="flex items-center gap-2 text-[11px] font-semibold tracking-wide uppercase text-slate-500 mb-1.5">
         ${icon(iconName, 14)} ${esc(label)}
       </div>
@@ -268,7 +270,9 @@ if (isScanPage) {
           ${infoTile("phone", t("result.company.phone"), company.phone, sources.phone)}
           ${infoTile("mail", t("result.company.email"), company.email, sources.email)}
           ${infoTile("briefcase", t("result.company.industry"), company.industry, sources.industry)}
-          ${infoTile("globe", t("result.company.website"), company.website, null)}
+          ${infoTile("shield", t("result.company.biz"), company.biz_number, sources.biz_number)}
+          ${infoTile("users", t("result.company.ceo"), company.ceo, sources.ceo)}
+          ${infoTile("globe", t("result.company.website"), company.website, null, true)}
         </div>
       </div>
     </div>`;
@@ -566,8 +570,16 @@ if (isScanPage) {
     renderResults();
   });
 
-  const requestedCompany = new URLSearchParams(window.location.search).get("company");
+  const params = new URLSearchParams(window.location.search);
+  const requestedCompany = params.get("company");
   if (requestedCompany) loadSavedCompany(requestedCompany);
+
+  // /?url=<website>&autoscan=1 — nút "Quét lại" ở trang công ty đã lưu.
+  if (params.get("url") && params.get("autoscan") === "1") {
+    urlInput.value = params.get("url");
+    window.history.replaceState({}, "", "/");
+    startScan();
+  }
 }
 
 // =========================================================================
@@ -588,6 +600,15 @@ if (isSavedPage) {
     return `<span class="saved-pill saved-pill-${tone}">${esc(levelText)} · ${esc(t("saved.jobsUnit", { count: Number(jobs) || 0 }))}</span>`;
   }
 
+  /* Thay đổi số tin IT so với lần quét trước: ▲ +3 là tín hiệu mua rõ nhất. */
+  function trendBadge(company) {
+    const delta = company.jobs_delta;
+    if (delta === null || delta === undefined || delta === 0) return "";
+    const up = delta > 0;
+    const title = t("saved.trendTitle", { prev: company.prev_it_jobs, date: localDate(company.prev_scanned_at) });
+    return `<span class="saved-trend ${up ? "saved-trend-up" : "saved-trend-down"}" title="${esc(title)}">${up ? "▲ +" : "▼ "}${delta}</span>`;
+  }
+
   function cell(value, truncate = false) {
     if (value === null || value === undefined || value === "") {
       return `<span class="saved-muted">${esc(NOT_FOUND())}</span>`;
@@ -604,11 +625,14 @@ if (isSavedPage) {
   }
 
   /* Danh sách đang hiển thị: toàn bộ, hoặc phần khớp ô tìm kiếm. */
+  let trendOnly = false;   // chỉ công ty có số tin IT tăng so với lần quét trước
+
   function visibleCompanies() {
     const query = savedFilter.value.trim().toLowerCase();
-    if (!query) return savedCompanies;
-    return savedCompanies.filter((company) =>
-      [company.name, company.industry, company.website, company.domain, company.address, company.email]
+    const pool = trendOnly ? savedCompanies.filter((company) => (company.jobs_delta || 0) > 0) : savedCompanies;
+    if (!query) return pool;
+    return pool.filter((company) =>
+      [company.name, company.industry, company.website, company.domain, company.address, company.email, company.biz_number, company.ceo]
         .some((field) => (field || "").toLowerCase().includes(query)));
   }
 
@@ -621,7 +645,9 @@ if (isSavedPage) {
       ? t("saved.countFiltered", {
           shown: companies.length, total: savedCompanies.length, query: savedFilter.value.trim(),
         })
-      : t("saved.count", { total: savedCompanies.length });
+      : trendOnly
+        ? t("saved.countTrend", { shown: companies.length, total: savedCompanies.length })
+        : t("saved.count", { total: savedCompanies.length });
 
     savedEmpty.classList.toggle("hidden", companies.length > 0);
     if (companies.length === 0) {
@@ -634,7 +660,7 @@ if (isSavedPage) {
 
     savedRows.innerHTML = companies.map((company) => `
       <tr data-id="${company.id}">
-        <td class="saved-name">${cell(company.name)}</td>
+        <td class="saved-name">${cell(company.name)}${company.biz_number ? `<div class="saved-sub">${esc(company.biz_number)}</div>` : ""}</td>
         <td>${cell(company.address, true)}</td>
         <td>${cell(company.phone)}</td>
         <td>${company.email
@@ -645,13 +671,14 @@ if (isSavedPage) {
           ? `<a href="${esc(company.website)}" target="_blank" rel="noopener noreferrer"
                class="saved-truncate text-blue-600 hover:text-blue-700" title="${esc(company.website)}">${esc(company.domain || company.website)}</a>`
           : `<span class="saved-muted">${esc(NOT_FOUND())}</span>`}</td>
-        <td>${signalPill(company.it_hiring, company.it_jobs)}</td>
+        <td>${signalPill(company.it_hiring, company.it_jobs)}${trendBadge(company)}</td>
         <td class="saved-date">${esc(localDate(company.updated_at))}</td>
         <td>
           <div class="saved-actions">
-            <button class="saved-btn" data-action="open" data-id="${company.id}">${esc(t("saved.action.view"))}</button>
-            <button class="saved-btn saved-btn-lead" data-action="lead" data-id="${company.id}" title="${esc(t("crm.lead.addFromScan"))}">${icon("userplus", 13)} ${esc(t("saved.action.lead"))}</button>
-            <button class="saved-btn saved-btn-danger" data-action="delete" data-id="${company.id}">${esc(t("saved.action.delete"))}</button>
+            <button class="saved-btn saved-btn-icon" data-action="open" data-id="${company.id}" title="${esc(t("saved.action.view"))}" aria-label="${esc(t("saved.action.view"))}">${icon("eye", 14)}</button>
+            <button class="saved-btn saved-btn-icon" data-action="rescan" data-id="${company.id}" data-url="${esc(company.website || "")}" title="${esc(t("saved.action.rescanTitle"))}" aria-label="${esc(t("saved.action.rescan"))}">${icon("refresh", 14)}</button>
+            <button class="saved-btn saved-btn-icon saved-btn-lead" data-action="lead" data-id="${company.id}" title="${esc(t("crm.lead.addFromScan"))}" aria-label="${esc(t("saved.action.lead"))}">${icon("userplus", 14)}</button>
+            <button class="saved-btn saved-btn-icon saved-btn-danger" data-action="delete" data-id="${company.id}" title="${esc(t("saved.action.delete"))}" aria-label="${esc(t("saved.action.delete"))}">${icon("trash", 14)}</button>
           </div>
         </td>
       </tr>`).join("");
@@ -682,15 +709,23 @@ if (isSavedPage) {
 
   savedRows.addEventListener("click", (event) => {
     const button = event.target.closest("button[data-action]");
-    if (!button) return;
+    if (!button) {
+      // Bấm vào dòng (không phải link/nút) cũng mở kết quả đầy đủ.
+      const row = event.target.closest("tr[data-id]");
+      if (row && !event.target.closest("a")) window.location.href = `/?company=${encodeURIComponent(row.dataset.id)}`;
+      return;
+    }
     const id = button.dataset.id;
     if (button.dataset.action === "open") {
       // Kết quả đầy đủ hiển thị ở trang quét.
       window.location.href = `/?company=${encodeURIComponent(id)}`;
     } else if (button.dataset.action === "lead") {
       openAsLead(id).catch(() => { savedCount.textContent = t("crm.error.saveFailed"); });
+    } else if (button.dataset.action === "rescan") {
+      // Trang quét tự bắt đầu với URL này; lưu lại sẽ ghi thêm một dòng lịch sử.
+      window.location.href = `/?url=${encodeURIComponent(button.dataset.url)}&autoscan=1`;
     } else {
-      deleteSaved(id, button.closest("tr").querySelector(".saved-name").textContent.trim());
+      deleteSaved(id, (button.closest("tr").querySelector(".saved-name").firstChild || {}).textContent?.trim());
     }
   });
 
@@ -707,11 +742,13 @@ if (isSavedPage) {
   function exportCsv() {
     const companies = visibleCompanies();
     const rows = [[
-      t("csv.name"), t("csv.address"), t("csv.phone"), t("csv.email"), t("csv.industry"),
-      t("csv.website"), t("csv.hiring"), t("csv.jobCount"), t("csv.contactCount"), t("csv.updated"),
+      t("csv.name"), t("csv.biz"), t("csv.ceo"), t("csv.address"), t("csv.phone"), t("csv.email"), t("csv.industry"),
+      t("csv.website"), t("csv.hiring"), t("csv.jobCount"), t("csv.jobDelta"), t("csv.contactCount"), t("csv.updated"),
     ]];
     companies.forEach((company) => rows.push([
       company.name || NOT_FOUND(),
+      company.biz_number || NOT_FOUND(),
+      company.ceo || NOT_FOUND(),
       company.address || NOT_FOUND(),
       company.phone || NOT_FOUND(),
       company.email || NOT_FOUND(),
@@ -719,6 +756,7 @@ if (isSavedPage) {
       company.website || NOT_FOUND(),
       t("signal." + (company.it_hiring || "None")),
       company.it_jobs ?? 0,
+      company.jobs_delta === null || company.jobs_delta === undefined ? "" : company.jobs_delta,
       company.contacts ?? 0,
       localDate(company.updated_at),
     ]));
@@ -765,6 +803,14 @@ if (isSavedPage) {
 
   document.getElementById("saved-refresh").addEventListener("click", loadSaved);
   savedFilter.addEventListener("input", renderSaved);
+  const trendToggle = document.getElementById("saved-trend-toggle");
+  if (trendToggle) {
+    trendToggle.addEventListener("click", () => {
+      trendOnly = !trendOnly;
+      trendToggle.classList.toggle("saved-toggle-active", trendOnly);
+      renderSaved();
+    });
+  }
 
   /* Câu mô tả có chèn tên nút "Xem" nên phải dựng bằng JS, không dùng data-i18n. */
   function renderDescription() {

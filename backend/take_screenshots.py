@@ -146,6 +146,16 @@ async def main() -> int:
             await page.wait_for_timeout(300)
             await page.locator("#lead-modal .crm-modal").screenshot(path=str(OUT / "13-crm-lead.png"))
             print("  13-crm-lead.png")
+
+            # Mail nháp tiếng Hàn: chữ ký mẫu chỉ để minh hoạ, không lưu lại.
+            await page.evaluate("localStorage.removeItem('company-scanner-mail-signature')")
+            await page.click("#lead-mail-btn")
+            await page.wait_for_selector("#lead-mail:not(.hidden)")
+            await page.fill("#mail-signature", "홍길동 | ○○ IT 아웃소싱 영업팀 | 010-0000-0000")
+            await page.wait_for_timeout(200)
+            await page.locator("#lead-mail").screenshot(path=str(OUT / "16-crm-mail.png"))
+            print("  16-crm-mail.png")
+            await page.evaluate("localStorage.removeItem('company-scanner-mail-signature')")
             await page.keyboard.press("Escape")
             await page.set_viewport_size({"width": 1280, "height": 800})
 

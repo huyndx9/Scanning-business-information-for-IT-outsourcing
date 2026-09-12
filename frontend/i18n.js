@@ -65,6 +65,8 @@ const DICT = {
     "result.company.email": "이메일",
     "result.company.industry": "사업 분야",
     "result.company.website": "웹사이트",
+    "result.company.biz": "사업자등록번호",
+    "result.company.ceo": "대표자",
 
     "result.contacts.heading": "주요 담당자",
     "result.contacts.desc": "CTO / CIO / IT 우선 — 최대 3명",
@@ -103,6 +105,12 @@ const DICT = {
     "saved.loading": "불러오는 중...",
     "saved.searchPlaceholder": "기업명, 이메일, 업종, 웹사이트로 검색...",
     "saved.refresh": "새로고침",
+    "saved.trendOnly": "▲ IT 채용 증가",
+    "saved.countTrend": "이전 스캔보다 IT 채용이 늘어난 기업 {shown}/{total}개",
+    "saved.trendOnlyTitle": "이전 스캔보다 IT 채용 공고가 늘어난 기업만 표시",
+    "saved.trendTitle": "이전 스캔 {date}: {prev}건",
+    "saved.action.rescan": "재스캔",
+    "saved.action.rescanTitle": "다시 스캔해서 IT 채용 변화를 기록",
     "saved.export": "내보내기",
     "saved.exportCsv": "Excel 내보내기 (.csv)",
     "saved.exportJson": "전체 JSON 내보내기 (.json)",
@@ -131,6 +139,8 @@ const DICT = {
 
     // -- CSV 머리글 ---------------------------------------------------------
     "csv.name": "기업명",
+    "csv.biz": "사업자등록번호",
+    "csv.ceo": "대표자",
     "csv.address": "주소",
     "csv.phone": "전화번호",
     "csv.email": "이메일",
@@ -138,6 +148,7 @@ const DICT = {
     "csv.website": "웹사이트",
     "csv.hiring": "IT 채용",
     "csv.jobCount": "IT 포지션 수",
+    "csv.jobDelta": "이전 스캔 대비 증감",
     "csv.contactCount": "주요 담당자 수",
     "csv.updated": "업데이트",
 
@@ -348,6 +359,33 @@ const DICT = {
     "crm.confirmDelete": "선택한 {count}건의 리드를 삭제할까요?",
     "crm.confirmDeleteOne": "\"{name}\" 리드를 삭제할까요? 활동 기록도 함께 삭제됩니다.",
 
+
+    "crm.exportIcs": "캘린더로 내보내기 (.ics)",
+    "crm.mail.open": "메일 초안",
+    "crm.mail.heading": "메일 초안 (한국어)",
+    "crm.mail.tpl.cold": "첫 제안 메일",
+    "crm.mail.tpl.followup": "미팅 후 팔로업",
+    "crm.mail.tpl.quote": "견적서 발송",
+    "crm.mail.signature": "내 서명 (이름 · 회사 · 연락처, 자동 저장)",
+    "crm.mail.signatureHint": "홍길동 | ○○ IT 아웃소싱 영업팀 | 010-0000-0000",
+    "crm.mail.signatureFallback": "(서명을 입력하세요)",
+    "crm.mail.subject": "제목",
+    "crm.mail.body": "본문",
+    "crm.mail.copy": "제목+본문 복사",
+    "crm.mail.copied": "복사됨",
+    "crm.mail.send": "메일 앱으로 열기",
+    "crm.mail.defaultContact": "담당자님",
+    "crm.mail.defaultRank": "담당자",
+    "crm.mail.defaultTech": "IT 개발",
+    "crm.mail.defaultProject": "파견·도급·ODC 전담팀",
+    "crm.mail.teamSize": "{count}명 규모의 ",
+    "crm.mail.expectedStart": "{month} 착수 기준으로 ",
+    "crm.mail.subject.cold": "[{company}] {tech} 개발 인력 협업 제안 — 한국어 브릿지 SE 포함 베트남 개발팀",
+    "crm.mail.body.cold": "{company} {contact}, 안녕하세요.\n\n{company}에서 {tech} 분야 인력을 채용 중이신 것을 보고 연락드립니다.\n\n저희는 한국 기업을 대상으로 베트남 개발 인력을 제공하는 IT 아웃소싱 회사입니다. 한국어 가능 브릿지 SE가 프로젝트 전 기간 함께하므로, 소통 부담 없이 국내 협력사처럼 협업하실 수 있습니다.\n\n- 계약 형태: {project} 등 원하시는 방식으로 구성\n- 기술: {tech}\n- 인력 투입까지 평균 2주, 필요 시 사전 인터뷰 진행\n\n{team}{tech} 개발팀이 필요하시다면 15분 정도 온라인 미팅으로 {company}의 상황에 맞는 방안과 단가를 설명드리고 싶습니다. 편하신 일정을 알려주시면 맞추겠습니다.\n\n감사합니다.\n\n{signature}",
+    "crm.mail.subject.followup": "[{company}] 미팅 감사드립니다 — 논의 내용 정리 및 다음 단계",
+    "crm.mail.body.followup": "{company} {contact}, 안녕하세요.\n\n오늘 귀한 시간 내어 미팅해 주셔서 감사합니다. 논의한 내용을 아래와 같이 정리해 드립니다.\n\n- 필요 인력: {team}{tech}\n- 계약 형태: {project}\n- 일정: {start}진행 예정\n\n다음 단계로 요청하신 인력 프로필과 견적서를 이번 주 안에 보내드리겠습니다. 추가로 확인이 필요한 사항이 있으시면 언제든 말씀해 주세요.\n\n감사합니다.\n\n{signature}",
+    "crm.mail.subject.quote": "[{company}] {tech} 개발 인력 견적서 송부",
+    "crm.mail.body.quote": "{company} {contact}, 안녕하세요.\n\n요청하신 {team}{tech} 개발 인력 견적서를 첨부하여 보내드립니다.\n\n- 계약 형태: {project}\n- 투입 시점: {start}인력 확보 가능\n- 견적 유효기간: 발송일로부터 30일\n\n견적 검토 후 궁금하신 점이나 조정이 필요한 부분이 있으시면 편하게 연락 주세요. 필요하시면 후보 인력 인터뷰도 바로 잡아 드리겠습니다.\n\n감사합니다.\n\n{signature}",
     "crm.lead.addFromScan": "CRM 리드로 추가",
     "saved.action.lead": "리드",
   },
@@ -408,6 +446,8 @@ const DICT = {
     "result.company.email": "Email",
     "result.company.industry": "Lĩnh vực hoạt động",
     "result.company.website": "Website",
+    "result.company.biz": "Mã số DN (사업자등록번호)",
+    "result.company.ceo": "Người đại diện (대표)",
 
     "result.contacts.heading": "Key contacts",
     "result.contacts.desc": "Ưu tiên CTO / CIO / IT — tối đa 3 người",
@@ -446,6 +486,12 @@ const DICT = {
     "saved.loading": "Đang tải...",
     "saved.searchPlaceholder": "Tìm theo tên, email, lĩnh vực, website...",
     "saved.refresh": "Làm mới",
+    "saved.trendOnly": "▲ Tuyển IT tăng",
+    "saved.countTrend": "{shown}/{total} công ty có tuyển IT tăng so với lần quét trước",
+    "saved.trendOnlyTitle": "Chỉ hiện công ty có số tin tuyển IT tăng so với lần quét trước",
+    "saved.trendTitle": "Lần quét trước {date}: {prev} tin",
+    "saved.action.rescan": "Quét lại",
+    "saved.action.rescanTitle": "Quét lại để ghi nhận thay đổi tuyển dụng IT",
     "saved.export": "Xuất",
     "saved.exportCsv": "Xuất Excel (.csv)",
     "saved.exportJson": "Xuất JSON đầy đủ (.json)",
@@ -474,6 +520,8 @@ const DICT = {
 
     // -- Tiêu đề CSV ---------------------------------------------------------
     "csv.name": "Tên công ty",
+    "csv.biz": "Mã số DN",
+    "csv.ceo": "Người đại diện",
     "csv.address": "Địa chỉ",
     "csv.phone": "Số điện thoại",
     "csv.email": "Email",
@@ -481,6 +529,7 @@ const DICT = {
     "csv.website": "Website",
     "csv.hiring": "IT Hiring",
     "csv.jobCount": "Số vị trí IT",
+    "csv.jobDelta": "Thay đổi so với lần quét trước",
     "csv.contactCount": "Số key contacts",
     "csv.updated": "Cập nhật",
 
@@ -691,6 +740,33 @@ const DICT = {
     "crm.confirmDelete": "Xoá {count} lead đã chọn?",
     "crm.confirmDeleteOne": "Xoá lead \"{name}\"? Nhật ký hoạt động cũng bị xoá theo.",
 
+
+    "crm.exportIcs": "Xuất lịch (.ics)",
+    "crm.mail.open": "Soạn mail",
+    "crm.mail.heading": "Mail nháp (tiếng Hàn)",
+    "crm.mail.tpl.cold": "Mail đề xuất đầu tiên",
+    "crm.mail.tpl.followup": "Follow-up sau họp",
+    "crm.mail.tpl.quote": "Gửi báo giá",
+    "crm.mail.signature": "Chữ ký của bạn (tên · công ty · liên hệ, tự lưu)",
+    "crm.mail.signatureHint": "홍길동 | ○○ IT 아웃소싱 영업팀 | 010-0000-0000",
+    "crm.mail.signatureFallback": "(서명을 입력하세요)",
+    "crm.mail.subject": "Tiêu đề",
+    "crm.mail.body": "Nội dung",
+    "crm.mail.copy": "Copy tiêu đề + nội dung",
+    "crm.mail.copied": "Đã copy",
+    "crm.mail.send": "Mở trong ứng dụng mail",
+    "crm.mail.defaultContact": "담당자님",
+    "crm.mail.defaultRank": "담당자",
+    "crm.mail.defaultTech": "IT 개발",
+    "crm.mail.defaultProject": "파견·도급·ODC 전담팀",
+    "crm.mail.teamSize": "{count}명 규모의 ",
+    "crm.mail.expectedStart": "{month} 착수 기준으로 ",
+    "crm.mail.subject.cold": "[{company}] {tech} 개발 인력 협업 제안 — 한국어 브릿지 SE 포함 베트남 개발팀",
+    "crm.mail.body.cold": "{company} {contact}, 안녕하세요.\n\n{company}에서 {tech} 분야 인력을 채용 중이신 것을 보고 연락드립니다.\n\n저희는 한국 기업을 대상으로 베트남 개발 인력을 제공하는 IT 아웃소싱 회사입니다. 한국어 가능 브릿지 SE가 프로젝트 전 기간 함께하므로, 소통 부담 없이 국내 협력사처럼 협업하실 수 있습니다.\n\n- 계약 형태: {project} 등 원하시는 방식으로 구성\n- 기술: {tech}\n- 인력 투입까지 평균 2주, 필요 시 사전 인터뷰 진행\n\n{team}{tech} 개발팀이 필요하시다면 15분 정도 온라인 미팅으로 {company}의 상황에 맞는 방안과 단가를 설명드리고 싶습니다. 편하신 일정을 알려주시면 맞추겠습니다.\n\n감사합니다.\n\n{signature}",
+    "crm.mail.subject.followup": "[{company}] 미팅 감사드립니다 — 논의 내용 정리 및 다음 단계",
+    "crm.mail.body.followup": "{company} {contact}, 안녕하세요.\n\n오늘 귀한 시간 내어 미팅해 주셔서 감사합니다. 논의한 내용을 아래와 같이 정리해 드립니다.\n\n- 필요 인력: {team}{tech}\n- 계약 형태: {project}\n- 일정: {start}진행 예정\n\n다음 단계로 요청하신 인력 프로필과 견적서를 이번 주 안에 보내드리겠습니다. 추가로 확인이 필요한 사항이 있으시면 언제든 말씀해 주세요.\n\n감사합니다.\n\n{signature}",
+    "crm.mail.subject.quote": "[{company}] {tech} 개발 인력 견적서 송부",
+    "crm.mail.body.quote": "{company} {contact}, 안녕하세요.\n\n요청하신 {team}{tech} 개발 인력 견적서를 첨부하여 보내드립니다.\n\n- 계약 형태: {project}\n- 투입 시점: {start}인력 확보 가능\n- 견적 유효기간: 발송일로부터 30일\n\n견적 검토 후 궁금하신 점이나 조정이 필요한 부분이 있으시면 편하게 연락 주세요. 필요하시면 후보 인력 인터뷰도 바로 잡아 드리겠습니다.\n\n감사합니다.\n\n{signature}",
     "crm.lead.addFromScan": "Thêm vào CRM",
     "saved.action.lead": "Lead",
   },
@@ -735,7 +811,9 @@ function applyStaticTranslations() {
     element.placeholder = t(element.dataset.i18nPlaceholder);
   });
   document.querySelectorAll("[data-i18n-title]").forEach((element) => {
-    element.textContent = t(element.dataset.i18nTitle);
+    // <title> của trang nhận text; phần tử khác nhận thuộc tính title (tooltip).
+    if (element.tagName === "TITLE") element.textContent = t(element.dataset.i18nTitle);
+    else element.title = t(element.dataset.i18nTitle);
   });
 
   document.querySelectorAll("[data-lang-btn]").forEach((button) => {

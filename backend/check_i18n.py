@@ -193,6 +193,8 @@ CRM_GROUPS = {
     "activity": ("call", "email", "kakao", "meeting", "proposal", "quote", "other"),
     "score": ("hiring", "rank", "email", "phone", "kakao", "budget", "source", "project", "biz", "timing", "team"),
     "error": ("company_required", "email_invalid", "file_invalid"),
+    "mail.subject": ("cold", "followup", "quote"),
+    "mail.body": ("cold", "followup", "quote"),
 }
 for group, codes in CRM_GROUPS.items():
     used |= {f"crm.{group}.{code}" for code in codes}

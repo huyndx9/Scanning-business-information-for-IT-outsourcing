@@ -185,7 +185,8 @@ home_html = """
 <body><h1>테스트정보</h1>
 <p>기업의 IT 솔루션 구축을 전문으로 합니다.</p>
 <p>보도자료 문의: reporter@newspaper.co.kr</p>
-<footer>대표이사 김철수 | 주소 서울특별시 강남구 테헤란로 152, 5층
+<footer>상호 : (주)테스트정보 | 대표 : 김철수 | 사업자등록번호 : 120-81-12345 | 통신판매업신고 : 2020-서울강남-01234
+주소 서울특별시 강남구 테헤란로 152, 5층
 전화번호 02-1234-5678 | 팩스 02-1234-5679
 이메일: <a href="/cdn-cgi/l/email-protection#2f464149406f5b4a5c5b014c4001445d"><span class="__cf_email__" data-cfemail="2f464149406f5b4a5c5b014c4001445d">[email&#160;protected]</span></a>
 Copyright (c) Test Information Inc. All rights reserved.</footer>
@@ -206,7 +207,7 @@ crawl.pages = [
 ]
 result = build_result(crawl)
 
-check("company name found", result["company"]["name"] in ("테스트정보", "Test Information Inc"),
+check("company name found", result["company"]["name"] in ("테스트정보", "(주)테스트정보", "Test Information Inc"),
       f'-> {result["company"]["name"]!r}')
 check("address found", result["company"]["address"] == "서울특별시 강남구 테헤란로 152, 5층",
       f'-> {result["company"]["address"]!r}')
@@ -216,6 +217,9 @@ check("email found", result["company"]["email"] == "info@test.co.kr", f'-> {resu
 check("email carries a source", result["company_sources"]["email"] == "https://test.co.kr/")
 check("outside email rejected", result["company"]["email"] != "reporter@newspaper.co.kr")
 check("industry found", result["company"]["industry"] is not None)
+check("biz number from footer", result["company"]["biz_number"] == "120-81-12345", f'-> {result["company"]["biz_number"]!r}')
+check("biz number carries a source", result["company_sources"]["biz_number"] == "https://test.co.kr/")
+check("CEO label from footer", result["company"]["ceo"] == "김철수", f'-> {result["company"]["ceo"]!r}')
 check("CEO found", [c["name"] for c in result["key_contacts"]] == ["김철수"],
       f'-> {result["key_contacts"]}')
 check("contact carries a source", all(c["source_url"].startswith("https://test.co.kr") for c in result["key_contacts"]))
@@ -236,6 +240,8 @@ check("empty address is None", empty_result["company"]["address"] is None)
 check("empty phone is None", empty_result["company"]["phone"] is None)
 check("empty email is None", empty_result["company"]["email"] is None)
 check("empty industry is None", empty_result["company"]["industry"] is None)
+check("empty biz number is None", empty_result["company"]["biz_number"] is None)
+check("empty ceo is None", empty_result["company"]["ceo"] is None)
 check("empty contacts", empty_result["key_contacts"] == [])
 check("empty recruitment", empty_result["it_recruitment"] == [])
 check("empty signal is None", empty_result["sales_signal"]["it_hiring"] == "None")
@@ -275,13 +281,28 @@ other = {
 storage.save_result(other)
 check("lists both companies", len(storage.list_companies()) == 2)
 
-# Quet lai cung domain: cap nhat dong cu, khong tao ban trung.
-rescan = {**result, "company": {**result["company"], "phone": "02-9999-9999"}}
-storage.save_result(rescan)
+check("first scan has no trend", saved_one["jobs_delta"] is None)
+
+# Quet lai cung domain: cap nhat dong cu, khong tao ban trung, ghi them lich su.
+import time as _time  # noqa: E402
+_time.sleep(1.1)   # scanned_at chinh xac den giay; lan sau phai muon hon
+rescan = {**result, "company": {**result["company"], "phone": "02-9999-9999"},
+          "it_recruitment": result["it_recruitment"] + [
+              {"title": "데이터 엔지니어 채용", "source_url": "https://test.co.kr/recruit/5"},
+              {"title": "DevOps 엔지니어", "source_url": "https://test.co.kr/recruit/6"},
+              {"title": "QA 엔지니어", "source_url": "https://test.co.kr/recruit/7"},
+          ]}
+rescanned = storage.save_result(rescan)
 rows = storage.list_companies()
 updated = next(row for row in rows if row["domain"] == "test.co.kr")
 check("rescan does not duplicate", len(rows) == 2, f"-> {len(rows)} rows")
 check("rescan updates the row", updated["phone"] == "02-9999-9999", f'-> {updated["phone"]!r}')
+check("rescan records jobs delta", rescanned["jobs_delta"] == 3 and rescanned["prev_it_jobs"] == 2,
+      f'-> {rescanned["jobs_delta"]}, prev {rescanned["prev_it_jobs"]}')
+check("listing carries the trend", updated["jobs_delta"] == 3)
+check("other company has no trend", next(r for r in rows if r["domain"] == "other.co.kr")["jobs_delta"] is None)
+history = storage.scan_history("test.co.kr")
+check("history has both scans, newest first", [h["it_jobs"] for h in history] == [5, 2], f"-> {history}")
 
 full_list = storage.list_companies(include_results=True)
 check("full listing carries results", all(row.get("result") for row in full_list))
@@ -289,7 +310,8 @@ check("plain listing has no results", all("result" not in row for row in storage
 
 detail = storage.get_company(updated["id"])
 check("detail returns the full scan", detail["result"]["company"]["name"] == result["company"]["name"])
-check("detail keeps recruitment", len(detail["result"]["it_recruitment"]) == 2)
+check("detail keeps recruitment", len(detail["result"]["it_recruitment"]) == 5)
+check("detail carries history", len(detail["history"]) == 2 and detail["jobs_delta"] == 3)
 check("missing id returns None", storage.get_company(999999) is None)
 
 check("delete works", storage.delete_company(updated["id"]) is True)
@@ -362,6 +384,9 @@ check("lead from scan: company", scan_lead["company_name"] == result["company"][
 check("lead from scan: first contact", scan_lead["contact_name"] == result["key_contacts"][0]["name"])
 check("lead from scan: source scanner", scan_lead["source"] == "scanner")
 check("lead from scan: links company", scan_lead["company_id"] == 7)
+check("lead from scan: biz number", scan_lead["biz_number"] == "120-81-12345")
+no_contacts = {"id": 8, "domain": "x.co.kr", "result": {"company": {"name": "X", "ceo": "박영희"}, "key_contacts": []}}
+check("lead from scan: CEO fallback", crm.lead_from_company(no_contacts)["contact_name"] == "박영희")
 check("tech from jobs", "Java" in crm.tech_from_jobs([{"title": "Java 백엔드 개발자", "description": ""}]))
 check("tech word boundary", "Go" not in crm.tech_from_jobs([{"title": "Google Ads Manager", "description": ""}]))
 
@@ -415,6 +440,10 @@ try:
     check("bad json rejected", False)
 except crm.LeadError as exc:
     check("bad json rejected", str(exc) == "file_invalid")
+
+ics = crm.calendar_ics()
+check("ics has event for open lead with next_date", "DTSTART;VALUE=DATE:20200101" in ics and "BEGIN:VEVENT" in ics)
+check("ics folds long lines", all(len(line.encode("utf-8")) <= 75 for line in ics.split("\r\n")))
 
 check("delete leads (cascade activities)", crm.delete_leads([created["id"]]) == 1)
 check("activities gone with lead", crm.list_activities(created["id"]) == [])

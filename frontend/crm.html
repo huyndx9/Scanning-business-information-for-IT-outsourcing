@@ -66,6 +66,7 @@
             <div id="crm-export-menu" class="hidden crm-menu">
               <button id="crm-export-csv" class="crm-menu-item"><span data-icon="sheet" data-size="15"></span> <span data-i18n="crm.exportCsv"></span></button>
               <button id="crm-export-json" class="crm-menu-item"><span data-icon="json" data-size="15"></span> <span data-i18n="crm.exportJson"></span></button>
+              <a href="/api/leads/calendar.ics" class="crm-menu-item"><span data-icon="clock" data-size="15"></span> <span data-i18n="crm.exportIcs"></span></a>
             </div>
           </div>
           <button id="crm-import-btn" class="crm-btn"><span data-icon="upload" data-size="15"></span> <span data-i18n="crm.import"></span></button>
@@ -224,6 +225,7 @@
               <button type="button" id="lead-delete" class="crm-btn crm-btn-danger hidden"><span data-icon="trash" data-size="14"></span> <span data-i18n="crm.form.delete"></span></button>
               <a id="lead-scan-link" class="crm-link hidden" target="_blank" rel="noopener"><span data-icon="search" data-size="13"></span> <span data-i18n="crm.form.fromScanner"></span></a>
               <a id="lead-naver-link" class="crm-link hidden" target="_blank" rel="noopener noreferrer"><span data-icon="external" data-size="13"></span> <span data-i18n="crm.form.naver"></span></a>
+              <button type="button" id="lead-mail-btn" class="crm-link hidden"><span data-icon="mail" data-size="13"></span> <span data-i18n="crm.mail.open"></span></button>
             </div>
             <div class="flex items-center gap-2">
               <button type="button" class="crm-btn" data-close="lead-modal" data-i18n="crm.form.cancel"></button>
@@ -231,6 +233,27 @@
             </div>
           </div>
         </form>
+
+        <!-- Mẫu email tiếng Hàn điền sẵn từ lead -->
+        <section id="lead-mail" class="hidden crm-mail">
+          <div class="crm-mail-head">
+            <h4 data-i18n="crm.mail.heading"></h4>
+            <select id="mail-template" class="crm-select crm-select-sm">
+              <option value="cold" data-i18n="crm.mail.tpl.cold"></option>
+              <option value="followup" data-i18n="crm.mail.tpl.followup"></option>
+              <option value="quote" data-i18n="crm.mail.tpl.quote"></option>
+            </select>
+          </div>
+          <label class="crm-mail-field"><span data-i18n="crm.mail.signature"></span>
+            <textarea id="mail-signature" rows="2" data-i18n-placeholder="crm.mail.signatureHint"></textarea></label>
+          <label class="crm-mail-field"><span data-i18n="crm.mail.subject"></span><input id="mail-subject"></label>
+          <label class="crm-mail-field"><span data-i18n="crm.mail.body"></span><textarea id="mail-body" rows="14"></textarea></label>
+          <div class="flex items-center justify-end gap-2">
+            <span id="mail-copied" class="text-[12px] text-emerald-700 hidden" data-i18n="crm.mail.copied"></span>
+            <button type="button" id="mail-copy" class="crm-btn crm-btn-sm" data-i18n="crm.mail.copy"></button>
+            <a id="mail-send" class="crm-btn crm-btn-primary crm-btn-sm" data-i18n="crm.mail.send"></a>
+          </div>
+        </section>
 
         <!-- Nhật ký hoạt động: chỉ khi sửa lead đã có -->
         <section id="lead-activities" class="hidden crm-activities">
