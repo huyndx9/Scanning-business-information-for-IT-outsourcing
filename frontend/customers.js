@@ -287,7 +287,7 @@
   });
 
   $("contract-delete").addEventListener("click", async () => {
-    if (!editing || !editing.id || !window.confirm(t("cust.confirmDelete", { name: editing.title || editing.company_name }))) return;
+    if (!editing || !editing.id || !(await askConfirm(t("cust.confirmDelete", { name: editing.title || editing.company_name }), t("crm.form.delete")))) return;
     try {
       await api(`/api/contracts/${editing.id}`, { method: "DELETE" });
       hideModal();

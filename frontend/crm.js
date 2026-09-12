@@ -376,8 +376,8 @@
   }
 
   /* Lead vừa 수주: hỏi ghi hợp đồng ngay (form điền sẵn ở trang 고객). */
-  function offerContract(id) {
-    if (window.confirm(t("crm.wonRegisterContract"))) {
+  async function offerContract(id) {
+    if (await askConfirm(t("crm.wonRegisterContract"), t("cust.add"))) {
       window.location.href = `/customers?from_lead=${id}`;
     }
   }
@@ -524,7 +524,7 @@
   });
 
   $("lead-delete").addEventListener("click", async () => {
-    if (!editing || !window.confirm(t("crm.confirmDeleteOne", { name: editing.company_name }))) return;
+    if (!editing || !(await askConfirm(t("crm.confirmDeleteOne", { name: editing.company_name }), t("crm.form.delete")))) return;
     try {
       await api(`/api/leads/${editing.id}`, { method: "DELETE" });
       hideModal("lead-modal");
@@ -663,7 +663,7 @@
   $("crm-bulk-clear").addEventListener("click", () => { selected.clear(); render(); });
 
   $("crm-bulk-delete").addEventListener("click", async () => {
-    if (selected.size === 0 || !window.confirm(t("crm.confirmDelete", { count: selected.size }))) return;
+    if (selected.size === 0 || !(await askConfirm(t("crm.confirmDelete", { count: selected.size }), t("crm.bulk.delete")))) return;
     try {
       await api("/api/leads/delete", jsonBody({ ids: [...selected] }));
       selected.clear();

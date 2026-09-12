@@ -197,7 +197,7 @@ CRM_GROUPS = {
     "mail.body": ("cold", "followup", "quote"),
 }
 used |= {"result.hint.image", "result.hint.form"}   # t("result.hint." + hint.type)
-used |= {f"batch.status.{name}" for name in ("waiting", "running", "done", "saved", "error", "stopped")}
+used |= {f"batch.status.{name}" for name in ("waiting", "running", "done", "saved", "skipped", "error", "stopped")}
 # customers.js: label(group, code) -> t("<prefix>.<code>")
 CUST_GROUPS = {
     "cust.status": ("active", "completed", "renewed", "terminated"),

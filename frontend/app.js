@@ -136,6 +136,33 @@ async function openAsLead(companyId) {
   window.location.href = `/crm?lead=${payload.lead.id}`;
 }
 
+/* Hộp xác nhận riêng thay cho window.confirm(): trình duyệt nhúng (pane xem
+   trước, một số WebView) chặn hộp thoại gốc và trả về false ngay, nên nút Xoá
+   trông như không chạy. Trả về Promise<boolean>. */
+function askConfirm(message, okLabel) {
+  return new Promise((resolve) => {
+    const overlay = document.createElement("div");
+    overlay.className = "confirm-overlay";
+    overlay.innerHTML = `<div class="confirm-box" role="dialog" aria-modal="true">
+      <div class="confirm-message">${esc(message)}</div>
+      <div class="confirm-actions">
+        <button type="button" class="crm-btn" data-confirm="no">${esc(t("common.cancel"))}</button>
+        <button type="button" class="crm-btn crm-btn-danger confirm-ok" data-confirm="yes">${esc(okLabel || t("common.confirm"))}</button>
+      </div>
+    </div>`;
+    const finish = (answer) => { overlay.remove(); document.removeEventListener("keydown", onKey); resolve(answer); };
+    const onKey = (event) => { if (event.key === "Escape") finish(false); if (event.key === "Enter") finish(true); };
+    overlay.addEventListener("click", (event) => {
+      const button = event.target.closest("[data-confirm]");
+      if (button) finish(button.dataset.confirm === "yes");
+      else if (event.target === overlay) finish(false);
+    });
+    document.addEventListener("keydown", onKey);
+    document.body.appendChild(overlay);
+    overlay.querySelector(".confirm-ok").focus();
+  });
+}
+
 function download(blob, filename) {
   const url = URL.createObjectURL(blob);
   const anchor = document.createElement("a");
@@ -476,6 +503,8 @@ if (isScanPage) {
 
   async function saveCurrentResult() {
     if (!result || saveState === "saving") return;
+    const company = result.company || {};
+    if (!company.email && !company.phone && !(await askConfirm(t("result.save.noContactConfirm"), t("result.save.idle")))) return;
     saveState = "saving";
     renderResults();
     try {
@@ -589,6 +618,13 @@ if (isScanPage) {
   const batchStop = document.getElementById("batch-stop");
   const batchSummary = document.getElementById("batch-summary");
   const batchAutosave = document.getElementById("batch-autosave");
+  const batchRequireContact = document.getElementById("batch-require-contact");
+
+  /* Không có email lẫn điện thoại thì sales không liên hệ được -> không đáng lưu. */
+  function hasContactInfo(data) {
+    const company = data.company || {};
+    return Boolean(company.email || company.phone);
+  }
 
   let batchItems = [];        // { url, status, result, saved, error }
   let batchStopRequested = false;
@@ -615,7 +651,7 @@ if (isScanPage) {
   }
 
   function batchStatusPill(item) {
-    const tone = { waiting: "slate", running: "blue", done: "emerald", saved: "emerald", error: "rose", stopped: "slate" }[item.status] || "slate";
+    const tone = { waiting: "slate", running: "blue", done: "emerald", saved: "emerald", skipped: "amber", error: "rose", stopped: "slate" }[item.status] || "slate";
     return `<span class="crm-pill crm-pill-${tone}">${esc(t("batch.status." + item.status))}</span>`;
   }
 
@@ -643,9 +679,10 @@ if (isScanPage) {
 
     const done = batchItems.filter((item) => item.result).length;
     const failed = batchItems.filter((item) => item.status === "error").length;
+    const skipped = batchItems.filter((item) => item.status === "skipped").length;
     const rising = batchItems.filter((item) => item.saved && item.saved.jobs_delta > 0).length;
     batchSummary.classList.toggle("hidden", batchItems.length === 0);
-    batchSummary.textContent = t("batch.summary", { done, total: batchItems.length, failed, rising });
+    batchSummary.textContent = t("batch.summary", { done, total: batchItems.length, failed, skipped, rising });
   }
 
   /* Một lần quét qua SSE, trả về kết quả hoặc ném lỗi (mã lỗi đã dịch). */
@@ -693,7 +730,10 @@ if (isScanPage) {
         item.status = "done";
         result = item.result;
         markStage("done");
-        if (batchAutosave.checked) {
+        if (batchAutosave.checked && batchRequireContact.checked && !hasContactInfo(item.result)) {
+          item.status = "skipped";
+          item.error = t("batch.skippedNoContact");
+        } else if (batchAutosave.checked) {
           const response = await fetch("/api/companies", {
             method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ result: item.result }),
           });
@@ -906,7 +946,7 @@ if (isSavedPage) {
   }
 
   async function deleteSaved(id, name) {
-    if (!window.confirm(t("saved.confirmDelete", { name: name || t("saved.thisCompany") }))) return;
+    if (!(await askConfirm(t("saved.confirmDelete", { name: name || t("saved.thisCompany") }), t("saved.action.delete")))) return;
     try {
       const response = await fetch(`/api/companies/${id}`, { method: "DELETE" });
       if (!response.ok) throw new Error(String(response.status));

@@ -41,7 +41,7 @@ def _arrow(delta: int | None) -> str:
     return "  =  "
 
 
-async def scan_and_save(url: str) -> dict | None:
+async def scan_and_save(url: str, require_contact: bool = False) -> dict | None:
     try:
         result = await run_scan(url)
     except (CrawlError, UrlNotAllowed) as exc:
@@ -49,6 +49,10 @@ async def scan_and_save(url: str) -> dict | None:
         return None
     except Exception as exc:  # noqa: BLE001 - một site lỗi không được dừng cả đợt
         print(f"  x  {url}  ({type(exc).__name__})")
+        return None
+    company = result.get("company") or {}
+    if require_contact and not (company.get("email") or company.get("phone")):
+        print(f"  -  {url}  (khong co email/dien thoai -> khong luu)")
         return None
     summary = save_result(result)
     print(f"  {_arrow(summary.get('jobs_delta'))}  {summary['it_jobs']:>2} IT  {summary['it_hiring']:<6} "
@@ -60,6 +64,8 @@ async def main() -> int:
     parser = argparse.ArgumentParser(description=__doc__.split("\n")[0])
     parser.add_argument("--urls", help="file chứa URL, mỗi dòng một URL (quét + lưu, không cần đã có trong DB)")
     parser.add_argument("--days", type=int, default=0, help="chỉ quét lại công ty cập nhật cách đây hơn N ngày")
+    parser.add_argument("--keep-no-contact", action="store_true",
+                        help="với --urls: vẫn lưu site không có email lẫn điện thoại (mặc định bỏ qua)")
     args = parser.parse_args()
 
     if args.urls:
@@ -81,7 +87,7 @@ async def main() -> int:
     rising: list[dict] = []
     for index, url in enumerate(targets, start=1):
         print(f"[{index}/{len(targets)}] {url}")
-        summary = await scan_and_save(url)
+        summary = await scan_and_save(url, require_contact=bool(args.urls) and not args.keep_no_contact)
         if summary and (summary.get("jobs_delta") or 0) > 0:
             rising.append(summary)
         if index < len(targets):
