@@ -404,6 +404,30 @@
 }
 .crm-menu-item:hover { background: #f8fafc; }
 
+/* --- Thanh phu trong tab CRM: 파이프라인 | 고객 ------------------------------------ */
+
+.crm-subnav { display: inline-flex; gap: 4px; padding: 4px; border-radius: 999px; background: #f1f5f9; border: 1px solid #e2e8f0; margin-bottom: 16px; }
+.crm-subtab {
+  display: inline-flex; align-items: center; gap: 6px; height: 32px; padding: 0 14px; border-radius: 999px;
+  color: #475569; font-size: 13px; font-weight: 600; text-decoration: none; white-space: nowrap; transition: background-color .15s, color .15s;
+}
+.crm-subtab:hover { color: #0f172a; }
+.crm-subtab-active { background: #fff; color: #0f172a; box-shadow: 0 1px 2px rgba(15,23,42,.08); }
+.crm-subtab-active .tab-badge { background: #0f172a; color: #fff; }
+
+/* Nhan "khach cu" tren lead + banner trong modal */
+.crm-customer-pill {
+  display: inline-flex; align-items: center; margin-left: 6px; padding: 0 7px; height: 18px; border-radius: 999px;
+  background: #f5f3ff; border: 1px solid #ddd6fe; color: #6d28d9; font-size: 10.5px; font-weight: 700; text-decoration: none; vertical-align: middle;
+}
+.crm-customer-pill:hover { background: #ede9fe; }
+.crm-customer-banner {
+  display: flex; align-items: center; gap: 8px; flex-wrap: wrap; margin-bottom: 14px; padding: 10px 12px; border-radius: 12px;
+  background: #f5f3ff; border: 1px solid #ddd6fe; color: #4c1d95; font-size: 12.5px; font-weight: 600;
+}
+.crm-customer-banner.hidden { display: none; }
+.crm-customer-banner .crm-link { margin-left: auto; }
+
 /* --- KPI ------------------------------------------------------------------ */
 
 .crm-kpis {

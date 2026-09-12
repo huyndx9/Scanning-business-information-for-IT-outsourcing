@@ -1,4 +1,4 @@
-/* 고객 — trang /customers: khách hàng đã ký hợp đồng, giá trị, thời hạn, xếp hạng.
+/* 고객 — trang /crm/customers: khách hàng đã ký hợp đồng, giá trị, thời hạn, xếp hạng.
    Dùng icon(), esc(), download() từ app.js và t() từ i18n.js. Mọi số liệu đến
    từ /api/customers (SQLite); không có dữ liệu mẫu. */
 
@@ -185,8 +185,8 @@
         ? `<div class="crm-empty-title">${esc(t("cust.empty"))}</div><div>${esc(t("cust.emptyDesc"))}</div>`
         : esc(t("cust.emptyFiltered"));
     }
-    const badge = document.getElementById("nav-customers-count");
-    if (badge) badge.textContent = String(customers.length);
+    const subCustomers = $("sub-customers-count");
+    if (subCustomers) subCustomers.textContent = String(customers.length);
     $("cust-company-list").innerHTML = customers.map((c) => `<option value="${esc(c.company_name)}">`).join("");
   }
 
@@ -406,8 +406,16 @@
   window.addEventListener("langchange", () => { fillSelects(); render(); });
   fillSelects();
   load().then(async () => {
-    // /customers?from_lead=<id>: lead vừa 수주 ở CRM -> form hợp đồng điền sẵn.
+    refreshSubnavCounts({ customers: customers.length });
+    // /crm/customers?from_lead=<id>: lead vừa 수주 ở CRM -> form hợp đồng điền sẵn.
+    // ?q=<tên>: tới từ nhãn "기존 고객" của một lead -> lọc sẵn khách đó.
     const params = new URLSearchParams(window.location.search);
+    if (params.get("q")) {
+      searchInput.value = params.get("q");
+      render();
+      const first = visibleCustomers()[0];
+      if (first) { expanded.add(first.key); render(); }
+    }
     if (params.get("from_lead")) {
       try {
         const payload = await api(`/api/contracts/from-lead/${encodeURIComponent(params.get("from_lead"))}`);
@@ -415,7 +423,9 @@
       } catch (_) {
         toast(t("cust.error.loadFailed"), "error");
       }
-      window.history.replaceState({}, "", "/customers");
+    }
+    if (params.get("from_lead") || params.get("q")) {
+      window.history.replaceState({}, "", "/crm/customers");
     }
   });
 })();

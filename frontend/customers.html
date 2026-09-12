@@ -37,13 +37,9 @@
               <span data-icon="database" data-size="15"></span><span class="tab-label" data-i18n="nav.saved"></span>
               <span class="tab-badge" id="nav-saved-count">0</span>
             </a>
-            <a href="/crm" class="tab">
+            <a href="/crm" class="tab tab-active">
               <span data-icon="users" data-size="15"></span><span class="tab-label" data-i18n="nav.crm"></span>
               <span class="tab-badge" id="nav-crm-count">0</span>
-            </a>
-            <a href="/customers" class="tab tab-active">
-              <span data-icon="handshake" data-size="15"></span><span class="tab-label" data-i18n="nav.customers"></span>
-              <span class="tab-badge" id="nav-customers-count">0</span>
             </a>
           </nav>
 
@@ -75,6 +71,11 @@
           </div>
           <button id="cust-add-btn" class="crm-btn crm-btn-primary"><span data-icon="plus" data-size="15"></span> <span data-i18n="cust.add"></span></button>
         </div>
+      </div>
+
+      <div class="crm-subnav" role="tablist">
+        <a href="/crm" class="crm-subtab "><span data-icon="users" data-size="14"></span> <span data-i18n="crm.sub.pipeline"></span> <span class="tab-badge" id="sub-leads-count">0</span></a>
+        <a href="/crm/customers" class="crm-subtab crm-subtab-active"><span data-icon="handshake" data-size="14"></span> <span data-i18n="crm.sub.customers"></span> <span class="tab-badge" id="sub-customers-count">0</span></a>
       </div>
 
       <div class="crm-kpis" id="cust-kpis"></div>

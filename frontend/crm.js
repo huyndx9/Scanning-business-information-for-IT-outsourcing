@@ -47,6 +47,7 @@
   const tableWrap = $("crm-table-wrap");
 
   let leads = [];
+  let customersByKey = {};    // khách đã ký, khoá domain / tên thường: để gắn "기존 고객" lên lead
   let quick = "all";          // all | hot | overdue | week
   let statusFilter = "";      // "" = tất cả
   let view = "table";
@@ -144,6 +145,32 @@
     });
   }
 
+  /* Khách đã ký khớp với lead này (theo domain, không có thì theo tên công ty). */
+  function customerOf(lead) {
+    if (!lead) return null;
+    if (lead.domain && customersByKey[lead.domain]) return customersByKey[lead.domain];
+    const name = (lead.company_name || "").trim().toLowerCase();
+    return name ? customersByKey[name] || null : null;
+  }
+
+  function customerLink(customer) {
+    return `/crm/customers?q=${encodeURIComponent(customer.company_name)}`;
+  }
+
+  async function loadCustomers() {
+    try {
+      const payload = await api("/api/customers");
+      customersByKey = {};
+      (payload.customers || []).forEach((customer) => {
+        customersByKey[customer.key] = customer;
+        customersByKey[(customer.company_name || "").trim().toLowerCase()] = customer;
+      });
+      refreshSubnavCounts({ leads: leads.length, customers: (payload.customers || []).length });
+    } catch (_) {
+      // Không có thông tin khách thì lead vẫn hiển thị bình thường.
+    }
+  }
+
   // -- KPI ----------------------------------------------------------------------
 
   function renderKpis() {
@@ -208,7 +235,7 @@
       <td class="crm-td-check"><input type="checkbox" data-select="${lead.id}" ${selected.has(lead.id) ? "checked" : ""}></td>
       <td>
         <div class="crm-strong crm-clip" title="${esc(lead.company_name)}">${esc(lead.company_name)}</div>
-        <div class="crm-meta">${esc(meta)}</div>
+        <div class="crm-meta">${esc(meta)}${customerOf(lead) ? ` <a href="${customerLink(customerOf(lead))}" class="crm-customer-pill" title="${esc(t("crm.existingCustomerTitle"))}">${esc(t("crm.existingCustomer", { grade: customerOf(lead).grade }))}</a>` : ""}</div>
       </td>
       <td>
         <div class="crm-contact">
@@ -323,6 +350,8 @@
     if (view === "table") renderTable(list); else renderKanban(list);
     renderBulk();
     if (typeof setNavCrmBadge === "function") setNavCrmBadge(leads.length);
+    const subLeads = $("sub-leads-count");
+    if (subLeads) subLeads.textContent = String(leads.length);
   }
 
   function renderBulk() {
@@ -378,7 +407,7 @@
   /* Lead vừa 수주: hỏi ghi hợp đồng ngay (form điền sẵn ở trang 고객). */
   async function offerContract(id) {
     if (await askConfirm(t("crm.wonRegisterContract"), t("cust.add"))) {
-      window.location.href = `/customers?from_lead=${id}`;
+      window.location.href = `/crm/customers?from_lead=${id}`;
     }
   }
 
@@ -428,6 +457,21 @@
   }
   form.elements.status.addEventListener("change", toggleLostReason);
 
+  /* "Đang nói chuyện với khách cũ": hạng, tổng đã ký, link sang hợp đồng. */
+  function renderCustomerBanner(customer) {
+    const box = $("lead-customer");
+    if (!box) return;
+    if (!customer) { box.classList.add("hidden"); box.innerHTML = ""; return; }
+    const total = customer.total_value >= 100000000
+      ? `₩ ${(customer.total_value / 100000000).toFixed(1).replace(/\.0$/, "")}${t("crm.unit.eok")}`
+      : `₩ ${Math.round(customer.total_value / 10000).toLocaleString()}${t("crm.unit.man")}`;
+    box.classList.remove("hidden");
+    box.innerHTML = `${icon("handshake", 15)} <span>${esc(t("crm.existingCustomerBanner", {
+      grade: customer.grade, total, count: customer.contract_count,
+      next: customer.next_end || "—",
+    }))}</span> <a href="${customerLink(customer)}" class="crm-link">${esc(t("crm.existingCustomerLink"))}</a>`;
+  }
+
   function renderScore(lead) {
     const box = $("lead-score");
     if (!lead || lead.score === undefined) { box.classList.add("hidden"); return; }
@@ -461,6 +505,7 @@
     }
     $("lead-modal-title").textContent = editing.company_name;
     $("lead-modal-sub").textContent = t("crm.form.titleEdit", { source: label("source", editing.source), date: (editing.updated_at || "").slice(0, 10) });
+    renderCustomerBanner(customerOf(editing));
     setForm({ ...editing, ...(overrides || {}) });
     renderScore(editing);
     $("lead-delete").classList.remove("hidden");
@@ -484,6 +529,7 @@
     leadError.classList.add("hidden");
     $("lead-modal-title").textContent = t("crm.form.titleAdd");
     $("lead-modal-sub").textContent = t("crm.form.titleAddSub");
+    renderCustomerBanner(null);
     setForm({ source: "other", status: "new", ...(prefill || {}) });
     renderScore(null);
     $("lead-delete").classList.add("hidden");
@@ -864,7 +910,7 @@
 
   fillAllSelects();
   resetImport();
-  loadLeads().then(() => {
+  loadLeads().then(loadCustomers).then(() => { render(); }).then(() => {
     // /crm?lead=<id>: mở ngay lead vừa tạo từ trang quét / công ty đã lưu.
     const requested = new URLSearchParams(window.location.search).get("lead");
     if (requested) {

@@ -191,7 +191,7 @@ async def main() -> int:
             await page.keyboard.press("Escape")
 
         # -- 18-19. Khách hàng / hợp đồng -----------------------------------------------
-        await page.goto(BASE + "/customers")
+        await page.goto(BASE + "/crm/customers")
         await page.wait_for_load_state("networkidle")
         if await page.locator(".cust-card").count() > 0:
             await page.locator(".cust-card-head").first.click()

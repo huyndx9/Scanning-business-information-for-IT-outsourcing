@@ -41,10 +41,6 @@
               <span data-icon="users" data-size="15"></span><span class="tab-label" data-i18n="nav.crm"></span>
               <span class="tab-badge" id="nav-crm-count">0</span>
             </a>
-            <a href="/customers" class="tab">
-              <span data-icon="handshake" data-size="15"></span><span class="tab-label" data-i18n="nav.customers"></span>
-              <span class="tab-badge" id="nav-customers-count">0</span>
-            </a>
           </nav>
 
           <div class="langbar">
@@ -76,6 +72,11 @@
           <button id="crm-import-btn" class="crm-btn"><span data-icon="upload" data-size="15"></span> <span data-i18n="crm.import"></span></button>
           <button id="crm-add-btn" class="crm-btn crm-btn-primary"><span data-icon="plus" data-size="15"></span> <span data-i18n="crm.add"></span></button>
         </div>
+      </div>
+
+      <div class="crm-subnav" role="tablist">
+        <a href="/crm" class="crm-subtab crm-subtab-active"><span data-icon="users" data-size="14"></span> <span data-i18n="crm.sub.pipeline"></span> <span class="tab-badge" id="sub-leads-count">0</span></a>
+        <a href="/crm/customers" class="crm-subtab "><span data-icon="handshake" data-size="14"></span> <span data-i18n="crm.sub.customers"></span> <span class="tab-badge" id="sub-customers-count">0</span></a>
       </div>
 
       <!-- KPI -->
@@ -154,6 +155,8 @@
             <button type="button" class="crm-icon-btn" data-close="lead-modal" aria-label="close"><span data-icon="x" data-size="18"></span></button>
           </div>
         </div>
+
+        <div id="lead-customer" class="hidden crm-customer-banner"></div>
 
         <form id="lead-form" class="crm-form" autocomplete="off">
           <div class="crm-form-grid">

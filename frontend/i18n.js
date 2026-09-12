@@ -183,7 +183,13 @@ const DICT = {
     "csv.updated": "업데이트",
 
     // -- CRM ---------------------------------------------------------------
-    "nav.crm": "CRM 리드",
+    "nav.crm": "CRM",
+    "crm.sub.pipeline": "파이프라인",
+    "crm.sub.customers": "고객",
+    "crm.existingCustomer": "기존 고객 · {grade}",
+    "crm.existingCustomerTitle": "이미 계약한 고객입니다 — 계약 내역 보기",
+    "crm.existingCustomerBanner": "기존 고객 · {grade}등급 · 누적 {total} · 계약 {count}건 · 다음 만료 {next}",
+    "crm.existingCustomerLink": "계약 보기",
     "crm.title": "CRM 리드 — Company Scanner",
     "crm.heading": "CRM 리드",
     "crm.description": "IT 아웃소싱 영업 파이프라인. 스캔 결과에서 바로 리드를 만들고, 담당자·예산·발주 시기·활동 기록을 한곳에서 관리합니다.",
@@ -418,7 +424,6 @@ const DICT = {
     "crm.mail.body.quote": "{company} {contact}, 안녕하세요.\n\n요청하신 {team}{tech} 개발 인력 견적서를 첨부하여 보내드립니다.\n\n- 계약 형태: {project}\n- 투입 시점: {start}인력 확보 가능\n- 견적 유효기간: 발송일로부터 30일\n\n견적 검토 후 궁금하신 점이나 조정이 필요한 부분이 있으시면 편하게 연락 주세요. 필요하시면 후보 인력 인터뷰도 바로 잡아 드리겠습니다.\n\n감사합니다.\n\n{signature}",
 
     // -- 고객 / 계약 ----------------------------------------------------------
-    "nav.customers": "고객",
     "cust.title": "고객 — Company Scanner",
     "cust.heading": "계약 고객",
     "cust.description": "수주한 고객과 계약을 관리합니다. 누적 계약 금액으로 등급을 매기고, 만료가 다가오는 계약을 미리 알려 재계약·추가 인력 제안(리셀) 기회를 놓치지 않게 합니다.",
@@ -708,7 +713,13 @@ const DICT = {
     "csv.updated": "Cập nhật",
 
     // -- CRM ---------------------------------------------------------------
-    "nav.crm": "CRM Lead",
+    "nav.crm": "CRM",
+    "crm.sub.pipeline": "Pipeline",
+    "crm.sub.customers": "Khách hàng",
+    "crm.existingCustomer": "Khách cũ · {grade}",
+    "crm.existingCustomerTitle": "Công ty này đã ký hợp đồng — xem hợp đồng",
+    "crm.existingCustomerBanner": "Khách cũ · hạng {grade} · tổng đã ký {total} · {count} hợp đồng · hết hạn gần nhất {next}",
+    "crm.existingCustomerLink": "Xem hợp đồng",
     "crm.title": "CRM Lead — Company Scanner",
     "crm.heading": "CRM Lead",
     "crm.description": "Pipeline bán hàng IT outsourcing. Tạo lead thẳng từ kết quả quét, quản lý người liên hệ, ngân sách, thời điểm 발주 và nhật ký hoạt động ở một chỗ.",
@@ -943,7 +954,6 @@ const DICT = {
     "crm.mail.body.quote": "{company} {contact}, 안녕하세요.\n\n요청하신 {team}{tech} 개발 인력 견적서를 첨부하여 보내드립니다.\n\n- 계약 형태: {project}\n- 투입 시점: {start}인력 확보 가능\n- 견적 유효기간: 발송일로부터 30일\n\n견적 검토 후 궁금하신 점이나 조정이 필요한 부분이 있으시면 편하게 연락 주세요. 필요하시면 후보 인력 인터뷰도 바로 잡아 드리겠습니다.\n\n감사합니다.\n\n{signature}",
 
     // -- Khách hàng / hợp đồng ---------------------------------------------
-    "nav.customers": "Khách hàng",
     "cust.title": "Khách hàng — Company Scanner",
     "cust.heading": "Khách hàng đã ký hợp đồng",
     "cust.description": "Quản lý khách đã ký và các hợp đồng. Xếp hạng theo tổng giá trị đã ký, báo trước hợp đồng sắp hết hạn để không bỏ lỡ cơ hội gia hạn · bán thêm (resell).",

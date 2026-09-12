@@ -32,7 +32,7 @@ KEEP_AS_IS = {
     "lang.ko", "lang.vi", "saved.col.hiring", "csv.hiring",
     "result.company.email", "result.company.website",
     "saved.col.email", "saved.col.website", "csv.email", "csv.website", "batch.col.hiring",
-    "crm.source.linkedin", "crm.hot", "crm.form.email", "crm.form.website",
+    "crm.source.linkedin", "crm.hot", "crm.form.email", "crm.form.website", "nav.crm",
 }
 
 failures: list[str] = []

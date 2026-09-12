@@ -188,7 +188,10 @@ Xuất CSV (BOM, mở đúng trong Excel) hoặc JSON đúng những lead đang 
 
 ![Khách hàng](docs/screenshots/18-customers.png)
 
-Trang `/customers` là bước sau khi thắng deal. Ở CRM, đổi lead sang **수주** là app hỏi
+Màn hình **고객** (tab CRM → 파이프라인 | 고객, URL `/crm/customers`) là bước sau khi thắng deal.
+Lead nào thuộc công ty đã ký hợp đồng được gắn nhãn **기존 고객 · hạng** ngay trong bảng
+pipeline, và mở lead lên là thấy dải "khách cũ · hạng · tổng đã ký · hết hạn gần nhất →
+계약 보기" — sales biết ngay mình đang nói chuyện với khách cũ. Ở CRM, đổi lead sang **수주** là app hỏi
 ghi hợp đồng ngay — form mở với công ty, người liên hệ, ngân sách, số người, tháng bắt
 đầu điền sẵn từ lead. Mỗi khách hàng gom mọi hợp đồng của cùng công ty và hiện: **tổng giá
 trị đã ký** (LTV), giá trị đang thực hiện, ngày hết hạn gần nhất, mức hài lòng, số lần tái
@@ -322,7 +325,7 @@ backend/take_screenshots.py Chụp ảnh thật của app cho README (Playwright
 frontend/index.html        Trang "Quét mới" (giữ nguyên layout của prototype)
 frontend/saved.html        Trang "Công ty đã lưu"
 frontend/crm.html          Trang "CRM lead"
-frontend/customers.html    Trang "Khách hàng" (hợp đồng đã ký)
+frontend/customers.html    Màn hình "고객" trong tab CRM (hợp đồng đã ký)
 frontend/i18n.js           Từ điển tiếng Hàn/tiếng Việt, chuyển ngôn ngữ
 frontend/app.js            Dùng chung 3 trang: gọi API, render kết quả, export, danh sách
 frontend/crm.js            Trang CRM: KPI, bảng, Kanban, form lead, nhập/xuất file
@@ -333,18 +336,20 @@ frontend/app.css           Vài class bổ sung prototype chưa build (màu IT H
 
 `Company-Scanner-Prototype-Ui (1).html` được giữ nguyên làm UI reference, app không dùng file này.
 
-## Bốn trang
+## Ba tab, bốn màn hình
 
-Điều hướng nằm ở góc phải header, có mặt trên cả bốn trang:
+Điều hướng nằm ở góc phải header. Hai tab đầu là *kết quả scanner*, tab CRM là *bán hàng*
+và có thanh phụ **파이프라인 | 고객** ngay dưới tiêu đề:
 
-| Trang | URL | Nội dung |
+| Tab | URL | Nội dung |
 |---|---|---|
-| Quét mới | `/` | Nhập URL, quét, xem kết quả, lưu vào database |
-| Công ty đã lưu | `/saved` | Danh sách toàn bộ công ty trong database |
-| CRM lead | `/crm` | Pipeline bán hàng: lead, điểm, hoạt động, nhập/xuất |
-| Khách hàng | `/customers` | Hợp đồng đã ký: giá trị, thời hạn, hạng, cơ hội tái ký |
+| Quét mới | `/` | Nhập URL, quét (đơn hoặc hàng loạt), xem kết quả, lưu vào database |
+| Công ty đã lưu | `/saved` | Danh sách toàn bộ công ty trong database, xu hướng tuyển IT |
+| CRM → 파이프라인 | `/crm` | Lead: điểm, trạng thái, hoạt động, mail nháp, nhập/xuất |
+| CRM → 고객 | `/crm/customers` | Hợp đồng đã ký: giá trị, thời hạn, hạng, cơ hội tái ký |
 
-Số trên nút "Công ty đã lưu" là số công ty đang có; số trên "CRM lead" là số lead.
+Số trên tab "Công ty đã lưu" là số công ty; số trên tab "CRM" là số lead; thanh phụ hiện
+cả số lead và số khách. Đường dẫn cũ `/customers` tự chuyển sang `/crm/customers`.
 
 ## Lưu vào database
 

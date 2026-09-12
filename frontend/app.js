@@ -101,18 +101,23 @@ async function refreshNavCrmBadge() {
 }
 refreshNavCrmBadge();
 
-const navCustomersBadge = document.getElementById("nav-customers-count");
-async function refreshNavCustomersBadge() {
-  if (!navCustomersBadge || document.getElementById("cust-list")) return;
+/* Thanh phụ trong tab CRM: 파이프라인 (lead) | 고객 (hợp đồng). Mỗi trang con tự
+   biết số của mình; số bên kia lấy qua API. */
+async function refreshSubnavCounts(known = {}) {
+  const leads = document.getElementById("sub-leads-count");
+  const customers = document.getElementById("sub-customers-count");
+  if (!leads && !customers) return;
   try {
-    const response = await fetch("/api/customers");
-    if (!response.ok) return;
-    navCustomersBadge.textContent = String(((await response.json()).customers || []).length);
+    if (leads) {
+      leads.textContent = String(known.leads ?? ((await (await fetch("/api/leads")).json()).leads || []).length);
+    }
+    if (customers) {
+      customers.textContent = String(known.customers ?? ((await (await fetch("/api/customers")).json()).customers || []).length);
+    }
   } catch (_) {
-    // Badge giữ 0.
+    // Giữ 0.
   }
 }
-refreshNavCustomersBadge();
 
 /* Trang không tự tải danh sách công ty (như /crm) vẫn cần số trên tab "Công ty đã lưu". */
 async function refreshNavSavedBadge() {

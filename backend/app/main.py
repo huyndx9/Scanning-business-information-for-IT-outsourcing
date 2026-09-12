@@ -5,7 +5,7 @@ GET  /api/scan/stream     -> same work, streaming real progress over SSE
 GET  /                    -> the scanner UI (frontend/index.html)
 GET  /saved               -> saved companies
 GET  /crm                 -> CRM leads (frontend/crm.html), API under /api/leads
-GET  /customers           -> signed customers & contracts, API under /api/contracts, /api/customers
+GET  /crm/customers       -> signed customers & contracts (sub-tab of CRM); /customers redirects
 """
 from __future__ import annotations
 
@@ -14,8 +14,8 @@ import json
 import os
 from pathlib import Path
 
-from fastapi import FastAPI
-from fastapi.responses import FileResponse, JSONResponse, PlainTextResponse, StreamingResponse
+from fastapi import FastAPI, Request
+from fastapi.responses import FileResponse, JSONResponse, PlainTextResponse, RedirectResponse, StreamingResponse
 from fastapi.staticfiles import StaticFiles
 from pydantic import BaseModel
 
@@ -438,10 +438,17 @@ async def crm_page() -> FileResponse:
     return _page("crm.html")
 
 
-@app.get("/customers")
+@app.get("/crm/customers")
 async def customers_page() -> FileResponse:
-    """Trang khách hàng đã ký hợp đồng."""
+    """Trang khách hàng đã ký hợp đồng (màn hình con của CRM)."""
     return _page("customers.html")
+
+
+@app.get("/customers")
+async def customers_redirect(request: Request) -> RedirectResponse:
+    """Đường dẫn cũ; bookmark cũ vẫn dùng được (giữ nguyên query)."""
+    query = f"?{request.url.query}" if request.url.query else ""
+    return RedirectResponse(url=f"/crm/customers{query}", status_code=301)
 
 
 app.mount("/static", NoCacheStaticFiles(directory=str(FRONTEND_DIR)), name="static")
