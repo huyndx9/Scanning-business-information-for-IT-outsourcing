@@ -32,6 +32,19 @@ tuyển dụng → trích xuất → hoàn thành. Trạng thái được đẩy
 Events ngay khi crawler chuyển bước, nên đây là tiến trình thật chứ không phải hiệu
 ứng chạy theo đồng hồ.
 
+### 2b. Quét nhiều website cùng lúc
+
+![Quét hàng loạt](docs/screenshots/17-batch-scan.png)
+
+Bấm **여러 사이트 한꺼번에 스캔** dưới ô nhập: dán danh sách địa chỉ (mỗi dòng một
+địa chỉ — dán từ Excel, Notepad hay KakaoTalk đều được, dấu phẩy/khoảng trắng cũng
+tách được), hoặc nạp file `.txt`/`.csv` (app tự nhặt mọi thứ trông như website, cột nào
+cũng được; có **file mẫu** để tải). Tối đa 50, tự bỏ trùng. App quét **tuần tự** bằng đúng
+crawler của quét đơn, mỗi kết quả **tự lưu vào database** (ghi lịch sử ▲/▼), bảng bên
+dưới cập nhật từng dòng: trạng thái, tên công ty, người liên hệ, IT Hiring, nút **보기**
+mở chi tiết và **리드** đưa thẳng sang CRM. Site lỗi hiện lý do, không chặn các site còn
+lại; có nút **중지** để dừng giữa chừng.
+
 ### 3. Thông tin công ty và key contacts, mỗi trường kèm nguồn
 
 ![Thông tin công ty và key contacts](docs/screenshots/03-result-company-contacts.png)
@@ -239,12 +252,12 @@ python backend/scan_cli.py https://www.hyperinfo.co.kr
 
 In ra đúng JSON mà API trả về; tiến trình crawl in ở stderr.
 
-### Quét lại định kỳ / quét hàng loạt
+### Quét lại định kỳ / quét hàng loạt (dòng lệnh)
 
 ```bash
 python backend/rescan_cli.py                 # quét lại mọi công ty đã lưu
 python backend/rescan_cli.py --days 7        # chỉ công ty chưa quét trong 7 ngày
-python backend/rescan_cli.py --urls list.txt # quét + lưu từng URL trong file (mỗi dòng một URL)
+python backend/rescan_cli.py --urls list.txt # quét + lưu từng URL trong file (mỗi dòng một URL) — bản dòng lệnh của mục 2b
 ```
 
 Quét tuần tự, nghỉ 2 giây giữa các site, lưu thẳng vào database và in bảng ▲/▼ so với

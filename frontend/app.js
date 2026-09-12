@@ -163,6 +163,7 @@ if (isScanPage) {
   const placeholder = document.getElementById("placeholder");
 
   let scanning = false;
+  let batchRunning = false;   // đang quét hàng loạt (khai báo sớm vì startScan kiểm tra)
   let result = null;          // kết quả thật của lần quét hiện tại, hoặc null
   let showJson = false;
   let saveState = "idle";     // idle | saving | saved | error
@@ -502,7 +503,7 @@ if (isScanPage) {
 
   function startScan() {
     const raw = urlInput.value.trim();
-    if (!raw || scanning) return;
+    if (!raw || scanning || batchRunning) return;
 
     clearError();
     result = null;
@@ -561,6 +562,191 @@ if (isScanPage) {
     });
   }
 
+  // -- Quét hàng loạt -------------------------------------------------------
+  // Dán nhiều URL, quét tuần tự bằng chính /api/scan/stream, mỗi kết quả tự lưu
+  // vào database (ghi lịch sử ▲/▼) và hiện ở bảng dưới; kết quả mới nhất hiện
+  // ở khu kết quả để xem chi tiết ngay.
+
+  const BATCH_MAX = 50;
+  const batchPanel = document.getElementById("batch-panel");
+  const batchInput = document.getElementById("batch-input");
+  const batchRows = document.getElementById("batch-rows");
+  const batchStart = document.getElementById("batch-start");
+  const batchStop = document.getElementById("batch-stop");
+  const batchSummary = document.getElementById("batch-summary");
+  const batchAutosave = document.getElementById("batch-autosave");
+
+  let batchItems = [];        // { url, status, result, saved, error }
+  let batchStopRequested = false;
+
+  function parseBatchUrls() {
+    const seen = new Set();
+    const urls = [];
+    batchInput.value.split(/[\n,;\t ]+/).forEach((raw) => {
+      const value = raw.trim();
+      if (!value || value.startsWith("#")) return;
+      const key = value.toLowerCase().replace(/^https?:\/\//, "").replace(/\/+$/, "");
+      if (seen.has(key)) return;
+      seen.add(key);
+      urls.push(value);
+    });
+    return urls.slice(0, BATCH_MAX);
+  }
+
+  function renderBatchCount() {
+    const count = parseBatchUrls().length;
+    document.getElementById("batch-count").textContent = count ? t("batch.count", { count }) : "";
+    batchStart.textContent = t("batch.start", { count });
+    batchStart.disabled = batchRunning || count === 0;
+  }
+
+  function batchStatusPill(item) {
+    const tone = { waiting: "slate", running: "blue", done: "emerald", saved: "emerald", error: "rose", stopped: "slate" }[item.status] || "slate";
+    return `<span class="crm-pill crm-pill-${tone}">${esc(t("batch.status." + item.status))}</span>`;
+  }
+
+  function renderBatch() {
+    document.getElementById("batch-table-wrap").classList.toggle("hidden", batchItems.length === 0);
+    batchRows.innerHTML = batchItems.map((item, index) => {
+      const company = item.result ? item.result.company : null;
+      const contact = item.result && item.result.key_contacts[0];
+      const jobs = item.result ? item.result.it_recruitment.length : null;
+      const signal = item.result ? item.result.sales_signal.it_hiring : null;
+      const delta = item.saved && item.saved.jobs_delta;
+      return `<tr>
+        <td class="crm-meta">${index + 1}</td>
+        <td><span class="crm-clip" title="${esc(item.url)}">${esc(item.url.replace(/^https?:\/\//, ""))}</span></td>
+        <td>${batchStatusPill(item)}${item.error ? `<div class="crm-meta">${esc(item.error)}</div>` : ""}</td>
+        <td>${company ? `<div class="crm-strong crm-clip">${esc(company.name || "")}</div><div class="crm-meta crm-clip">${esc(company.email || company.phone || "")}</div>` : ""}</td>
+        <td>${contact ? `<div class="crm-clip">${esc(contact.name)}</div><div class="crm-meta crm-clip">${esc(contact.position || "")}</div>` : (company && company.ceo ? esc(company.ceo) : "")}</td>
+        <td>${jobs === null ? "" : `<span class="saved-pill saved-pill-${{ High: "high", Medium: "medium", Low: "low" }[signal] || "none"}">${esc(t("signal." + signal))} · ${jobs}</span>${delta ? `<span class="saved-trend ${delta > 0 ? "saved-trend-up" : "saved-trend-down"}">${delta > 0 ? "▲ +" : "▼ "}${delta}</span>` : ""}`}</td>
+        <td><div class="saved-actions">
+          ${item.result ? `<button class="saved-btn" data-batch-view="${index}">${esc(t("saved.action.view"))}</button>` : ""}
+          ${item.saved ? `<button class="saved-btn saved-btn-lead" data-batch-lead="${item.saved.id}">${esc(t("saved.action.lead"))}</button>` : ""}
+        </div></td>
+      </tr>`;
+    }).join("");
+
+    const done = batchItems.filter((item) => item.result).length;
+    const failed = batchItems.filter((item) => item.status === "error").length;
+    const rising = batchItems.filter((item) => item.saved && item.saved.jobs_delta > 0).length;
+    batchSummary.classList.toggle("hidden", batchItems.length === 0);
+    batchSummary.textContent = t("batch.summary", { done, total: batchItems.length, failed, rising });
+  }
+
+  /* Một lần quét qua SSE, trả về kết quả hoặc ném lỗi (mã lỗi đã dịch). */
+  function scanViaStream(url) {
+    return new Promise((resolve, reject) => {
+      const source = new EventSource(`/api/scan/stream?url=${encodeURIComponent(url)}`);
+      source.addEventListener("progress", (event) => markStage(JSON.parse(event.data).stage));
+      source.addEventListener("result", (event) => { source.close(); resolve(JSON.parse(event.data)); });
+      source.addEventListener("scan_error", (event) => {
+        source.close();
+        let payload = null;
+        try { payload = JSON.parse(event.data); } catch (_) { payload = null; }
+        const known = payload && payload.code && ERROR_CODES.includes(payload.code);
+        reject(new Error(known ? t("error." + payload.code) : (payload && payload.message) || t("error.internal")));
+      });
+      source.addEventListener("error", () => { source.close(); reject(new Error(t("error.unreachable"))); });
+    });
+  }
+
+  async function runBatch() {
+    const urls = parseBatchUrls();
+    if (!urls.length || batchRunning || scanning) return;
+    batchItems = urls.map((url) => ({ url, status: "waiting", result: null, saved: null, error: "" }));
+    batchRunning = true;
+    batchStopRequested = false;
+    batchStart.disabled = true;
+    batchStop.disabled = false;
+    batchStop.classList.remove("hidden");
+    clearError();
+    renderBatch();
+
+    for (const item of batchItems) {
+      if (batchStopRequested) { item.status = "stopped"; continue; }
+      item.status = "running";
+      renderBatch();
+      result = null;
+      showJson = false;
+      saveState = "idle";
+      savedCompanyId = null;
+      stageState = STAGE_IDS.map((id, index) => ({ id, done: false, active: index === 0 }));
+      setScanning(true);
+      renderProgress();
+      try {
+        item.result = await scanViaStream(item.url);
+        item.status = "done";
+        result = item.result;
+        markStage("done");
+        if (batchAutosave.checked) {
+          const response = await fetch("/api/companies", {
+            method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ result: item.result }),
+          });
+          if (response.ok) {
+            item.saved = await response.json();
+            item.status = "saved";
+            savedCompanyId = item.saved.id;
+            saveState = "saved";
+          }
+        }
+      } catch (error) {
+        item.status = "error";
+        item.error = error.message || "";
+        stageState = stageState.map((stage) => ({ ...stage, active: false }));
+      }
+      setScanning(false);
+      renderProgress();
+      renderResults();
+      renderBatch();
+    }
+
+    batchRunning = false;
+    batchStop.classList.add("hidden");
+    refreshNavBadge();
+    renderBatchCount();
+  }
+
+  document.getElementById("batch-toggle").addEventListener("click", () => {
+    batchPanel.classList.toggle("hidden");
+    if (!batchPanel.classList.contains("hidden")) { renderBatchCount(); batchInput.focus(); }
+  });
+  batchInput.addEventListener("input", renderBatchCount);
+
+  /* File .txt/.csv: lấy mọi thứ trông như website (cột nào cũng được), thêm vào ô. */
+  document.getElementById("batch-file").addEventListener("change", async (event) => {
+    const file = event.target.files[0];
+    if (!file) return;
+    const text = await file.text();
+    const found = text.match(/(?:https?:\/\/)?(?:[a-z0-9-]+\.)+[a-z]{2,}(?:\/[^\s,;"']*)?/gi) || [];
+    const existing = batchInput.value.trim();
+    batchInput.value = (existing ? existing + "\n" : "") + found.join("\n");
+    event.target.value = "";
+    renderBatchCount();
+  });
+
+  document.getElementById("batch-sample").addEventListener("click", () => {
+    const sample = t("batch.sampleFile");
+    download(new Blob(["\ufeff" + sample], { type: "text/plain;charset=utf-8;" }), "scan_urls_sample.txt");
+  });
+  batchStart.addEventListener("click", runBatch);
+  batchStop.addEventListener("click", () => { batchStopRequested = true; batchStop.disabled = true; });
+  batchRows.addEventListener("click", (event) => {
+    const view = event.target.closest("[data-batch-view]");
+    if (view) {
+      const item = batchItems[Number(view.dataset.batchView)];
+      result = item.result;
+      showJson = false;
+      savedCompanyId = item.saved ? item.saved.id : null;
+      saveState = item.saved ? "saved" : "idle";
+      renderResults();
+      resultsBox.scrollIntoView({ behavior: "smooth", block: "start" });
+      return;
+    }
+    const lead = event.target.closest("[data-batch-lead]");
+    if (lead) openAsLead(lead.dataset.batchLead).catch(() => showError(t("crm.error.saveFailed"), ""));
+  });
+
   scanBtn.addEventListener("click", startScan);
   urlInput.addEventListener("keydown", (event) => { if (event.key === "Enter") startScan(); });
   urlInput.addEventListener("input", () => { scanBtn.disabled = scanning || !urlInput.value.trim(); });
@@ -574,6 +760,9 @@ if (isScanPage) {
     setScanning(scanning);
     renderProgress();
     renderResults();
+    renderBatch();
+    renderBatchCount();
+    batchStop.textContent = t("batch.stop");
   });
 
   const params = new URLSearchParams(window.location.search);

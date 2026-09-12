@@ -130,6 +130,20 @@ async def main() -> int:
         await page.wait_for_selector("#error-box:not(.hidden)", timeout=15000)
         await shot_full_clip(page, "11-error.png", ["#error-box"])
 
+        # -- 17. Quét hàng loạt: 2 site thật, tự lưu ---------------------------------
+        await page.goto(BASE + "/")
+        await page.wait_for_load_state("networkidle")
+        await page.click("#batch-toggle")
+        await page.fill("#batch-input", "https://www.inswave.com\nhttps://www.uracle.co.kr")
+        await page.click("#batch-start")
+        await page.wait_for_function(
+            "document.querySelectorAll('#batch-rows tr').length === 2 && "
+            "[...document.querySelectorAll('#batch-rows tr')].every(tr => !/대기|스캔 중/.test(tr.innerText))",
+            timeout=240000,
+        )
+        await page.wait_for_timeout(300)
+        await shot_full_clip(page, "17-batch-scan.png", ["#url-input >> xpath=ancestor::div[contains(@class,'rounded-[20px]')]"])
+
         # -- 12-15. CRM ----------------------------------------------------------------
         # Lead trong DB: tạo từ các công ty đã quét (nút "CRM 리드로 추가"), phần
         # sales (ngân sách, trạng thái, lịch) nhập tay. Không có lead thì bỏ qua.

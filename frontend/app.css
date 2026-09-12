@@ -369,6 +369,7 @@
 }
 .crm-btn:hover { background: #f8fafc; }
 .crm-btn:disabled { opacity: .5; cursor: not-allowed; }
+.crm-btn.hidden { display: none; }
 .crm-btn-primary { background: #2563eb; border-color: #2563eb; color: #fff; box-shadow: 0 1px 2px rgba(15,23,42,.08); }
 .crm-btn-primary:hover { background: #1d4ed8; }
 .crm-btn-danger { color: #be123c; }
@@ -682,6 +683,32 @@
 /* Nut "Lead" trong bang cong ty da luu */
 .saved-btn-lead { display: inline-flex; align-items: center; gap: 4px; color: #1d4ed8; border-color: #dbeafe; background: #eff6ff; }
 .saved-btn-lead:hover { background: #dbeafe; }
+
+/* --- Quet hang loat (trang quet) ----------------------------------------------- */
+
+.batch-toggle {
+  display: inline-flex; align-items: center; gap: 4px; border: none; background: none; padding: 0;
+  font: inherit; font-size: 11px; font-weight: 600; color: #2563eb; cursor: pointer; white-space: nowrap;
+}
+.batch-toggle:hover { color: #1d4ed8; }
+label.batch-toggle input { display: none; }
+.batch-panel { margin-top: 12px; padding-top: 12px; border-top: 1px dashed #e2e8f0; display: flex; flex-direction: column; gap: 10px; }
+.batch-panel.hidden { display: none; }
+.batch-panel textarea {
+  width: 100%; padding: 10px 12px; border-radius: 12px; border: 1px solid #e2e8f0; background: #f8fafc;
+  font-size: 13px; font-family: ui-monospace, SFMono-Regular, Consolas, monospace; line-height: 1.5; outline: none; resize: vertical;
+}
+.batch-panel textarea:focus { background: #fff; border-color: #3b82f6; }
+.batch-actions { display: flex; align-items: center; gap: 10px; flex-wrap: wrap; }
+.batch-spacer { flex: 1; }
+.batch-check { display: inline-flex; align-items: center; gap: 6px; font-size: 12px; color: #334155; font-weight: 500; }
+.batch-check input { accent-color: #2563eb; width: 14px; height: 14px; }
+.batch-meta { font-size: 12px; color: #64748b; }
+.batch-meta.hidden { display: none; }
+#batch-table-wrap.hidden { display: none; }
+.batch-table tbody tr { cursor: default; }
+.batch-table .crm-clip { max-width: 200px; }
+.batch-table .saved-trend { margin-left: 4px; }
 
 /* --- Toast ------------------------------------------------------------------- */
 

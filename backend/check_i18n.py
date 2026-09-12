@@ -31,7 +31,7 @@ KEEP_AS_IS = {
     "scan.title", "scan.heading", "saved.title", "result.json.heading",
     "lang.ko", "lang.vi", "saved.col.hiring", "csv.hiring",
     "result.company.email", "result.company.website",
-    "saved.col.email", "saved.col.website", "csv.email", "csv.website",
+    "saved.col.email", "saved.col.website", "csv.email", "csv.website", "batch.col.hiring",
     "crm.source.linkedin", "crm.hot", "crm.form.email", "crm.form.website",
 }
 
@@ -197,6 +197,7 @@ CRM_GROUPS = {
     "mail.body": ("cold", "followup", "quote"),
 }
 used |= {"result.hint.image", "result.hint.form"}   # t("result.hint." + hint.type)
+used |= {f"batch.status.{name}" for name in ("waiting", "running", "done", "saved", "error", "stopped")}
 for group, codes in CRM_GROUPS.items():
     used |= {f"crm.{group}.{code}" for code in codes}
 # EXPORT_FIELDS trong crm.js: [["company_name", "crm.form.company"], ...] -> t(key) luc xuat file
