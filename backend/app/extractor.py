@@ -672,6 +672,31 @@ def extract_email(crawl: CrawlResult) -> Evidence | None:
     return Evidence(best[1], best[2])
 
 
+EMAIL_IMAGE_RE = re.compile(
+    r"<img[^>]+(?:alt|src|class|id)\s*=\s*[\"'][^\"']*(?:e-?mail|메일|이메일)[^\"']*[\"']", re.I
+)
+CONTACT_FORM_RE = re.compile(
+    r"<form[^>]*>(?:(?!</form>).)*?<(?:input|textarea)[^>]+(?:type=[\"']email[\"']|name=[\"'][^\"']*(?:mail|email|contact|inquiry|message|content)[^\"']*[\"'])",
+    re.I | re.S,
+)
+
+
+def email_hint(crawl: CrawlResult) -> dict | None:
+    """Vì sao không có email — để người dùng biết phải làm gì tiếp thay vì
+    chỉ thấy "찾을 수 없음".
+
+    image: email được vẽ thành ảnh (chống thu thập tự động) -> mở nguồn đọc bằng mắt.
+    form : website chỉ có mẫu 문의하기, không đăng địa chỉ email nào.
+    """
+    for page in _page_priority(crawl.pages, ("contact", "company", "home")):
+        if EMAIL_IMAGE_RE.search(page.html or ""):
+            return {"type": "image", "url": page.final_url}
+    for page in _page_priority(crawl.pages, ("contact", "home", "company")):
+        if CONTACT_FORM_RE.search(page.html or ""):
+            return {"type": "form", "url": page.final_url}
+    return None
+
+
 def extract_industry(crawl: CrawlResult) -> Evidence | None:
     for page in _page_priority(crawl.pages, ("company", "home", "contact")):
         labelled = _label_value(page.text, INDUSTRY_LABELS, 60)
@@ -1015,6 +1040,7 @@ def build_result(crawl: CrawlResult) -> dict:
     phone = extract_phone(crawl)
     email = extract_email(crawl)
     industry = extract_industry(crawl)
+    hints = {"email": email_hint(crawl)} if email is None else {}
     biz_number = extract_biz_number(crawl)
     ceo = extract_ceo(crawl)
     contacts = extract_key_contacts(crawl, company["name"])
@@ -1049,6 +1075,7 @@ def build_result(crawl: CrawlResult) -> dict:
             "biz_number": biz_number.source_url if biz_number else NOT_FOUND,
             "ceo": ceo.source_url if ceo else NOT_FOUND,
         },
+        "company_hints": {key: value for key, value in hints.items() if value},
         "key_contacts": contacts,
         "it_recruitment": jobs,
         "sales_signal": {"it_hiring": hiring_signal(len(jobs))},

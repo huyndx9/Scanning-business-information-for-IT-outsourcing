@@ -66,6 +66,9 @@ const DICT = {
     "result.company.industry": "사업 분야",
     "result.company.website": "웹사이트",
     "result.company.biz": "사업자등록번호",
+    "result.hint.image": "이메일이 이미지로 표시되어 있습니다 — 사이트에서 직접 확인하세요",
+    "result.hint.form": "이메일 없이 문의 양식만 제공합니다",
+    "result.hint.open": "해당 페이지 열기",
     "result.company.ceo": "대표자",
 
     "result.contacts.heading": "주요 담당자",
@@ -447,6 +450,9 @@ const DICT = {
     "result.company.industry": "Lĩnh vực hoạt động",
     "result.company.website": "Website",
     "result.company.biz": "Mã số DN (사업자등록번호)",
+    "result.hint.image": "Email được hiển thị dưới dạng ảnh — mở trang để đọc trực tiếp",
+    "result.hint.form": "Website chỉ có mẫu liên hệ, không đăng email",
+    "result.hint.open": "Mở trang đó",
     "result.company.ceo": "Người đại diện (대표)",
 
     "result.contacts.heading": "Key contacts",

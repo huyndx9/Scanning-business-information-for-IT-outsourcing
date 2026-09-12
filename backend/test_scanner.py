@@ -241,6 +241,22 @@ check("empty phone is None", empty_result["company"]["phone"] is None)
 check("empty email is None", empty_result["company"]["email"] is None)
 check("empty industry is None", empty_result["company"]["industry"] is None)
 check("empty biz number is None", empty_result["company"]["biz_number"] is None)
+check("no hint when nothing on page", empty_result["company_hints"] == {})
+
+# Email vẽ thành ảnh / chỉ có form liên hệ: không bịa email, nhưng nói rõ lý do.
+imaged = CrawlResult(start_url="https://img.co.kr/", base_domain="img.co.kr")
+imaged.pages = [make_page("https://img.co.kr/", '<html><body><footer>메일 <img src="/images/email-footer.png" alt="이메일 주소"></footer></body></html>')]
+imaged_result = build_result(imaged)
+check("email still None when it is an image", imaged_result["company"]["email"] is None)
+check("hint: email is an image", imaged_result["company_hints"].get("email", {}).get("type") == "image",
+      f'-> {imaged_result["company_hints"]}')
+formed = CrawlResult(start_url="https://form.co.kr/", base_domain="form.co.kr")
+formed.pages = [make_page("https://form.co.kr/contact", '<html><body><h1>문의하기</h1><form><input name="name"><input type="email" name="email"><textarea name="content"></textarea></form></body></html>', category="contact")]
+formed_result = build_result(formed)
+check("hint: contact form only", formed_result["company_hints"].get("email", {}).get("type") == "form",
+      f'-> {formed_result["company_hints"]}')
+check("hint points at the form page", formed_result["company_hints"]["email"]["url"] == "https://form.co.kr/contact")
+check("no hint when email was found", result["company_hints"] == {})
 check("empty ceo is None", empty_result["company"]["ceo"] is None)
 check("empty contacts", empty_result["key_contacts"] == [])
 check("empty recruitment", empty_result["it_recruitment"] == [])

@@ -196,6 +196,7 @@ CRM_GROUPS = {
     "mail.subject": ("cold", "followup", "quote"),
     "mail.body": ("cold", "followup", "quote"),
 }
+used |= {"result.hint.image", "result.hint.form"}   # t("result.hint." + hint.type)
 for group, codes in CRM_GROUPS.items():
     used |= {f"crm.{group}.{code}" for code in codes}
 # EXPORT_FIELDS trong crm.js: [["company_name", "crm.form.company"], ...] -> t(key) luc xuat file

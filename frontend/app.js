@@ -233,19 +233,25 @@ if (isScanPage) {
     return value.slice(0, 2).toUpperCase();
   }
 
-  function infoTile(iconName, label, value, source, wide = false) {
+  function infoTile(iconName, label, value, source, wide = false, hint = null) {
+    // Không có giá trị nhưng biết lý do (email là ảnh / chỉ có form liên hệ):
+    // nói rõ lý do và trỏ tới trang đó thay vì chỉ "찾을 수 없음".
+    const body = (value === null || value === undefined || value === "") && hint
+      ? `<span class="text-amber-700">${esc(t("result.hint." + hint.type))}</span>`
+      : orNotFound(value);
     return `<div class="rounded-xl bg-slate-50 border border-slate-200 p-3.5 ${wide ? "tile-wide" : ""}">
       <div class="flex items-center gap-2 text-[11px] font-semibold tracking-wide uppercase text-slate-500 mb-1.5">
         ${icon(iconName, 14)} ${esc(label)}
       </div>
-      <div class="text-[13px] leading-snug font-medium break-all">${orNotFound(value)}</div>
-      ${sourceLink(source)}
+      <div class="text-[13px] leading-snug font-medium break-all">${body}</div>
+      ${sourceLink(source || (hint && hint.url), hint && !value ? t("result.hint.open") : undefined)}
     </div>`;
   }
 
   function renderCompanyCard(data) {
     const company = data.company || {};
     const sources = data.company_sources || {};
+    const hints = data.company_hints || {};
     return `<div class="lg:col-span-7 rounded-[20px] border border-slate-200 bg-white p-5 md:p-6 shadow-sm">
       <div class="flex items-start justify-between gap-4 mb-5">
         <div class="flex items-center gap-3">
@@ -268,7 +274,7 @@ if (isScanPage) {
         <div class="grid grid-cols-1 md:grid-cols-2 gap-3 pt-2">
           ${infoTile("mappin", t("result.company.address"), company.address, sources.address)}
           ${infoTile("phone", t("result.company.phone"), company.phone, sources.phone)}
-          ${infoTile("mail", t("result.company.email"), company.email, sources.email)}
+          ${infoTile("mail", t("result.company.email"), company.email, sources.email, false, hints.email)}
           ${infoTile("briefcase", t("result.company.industry"), company.industry, sources.industry)}
           ${infoTile("shield", t("result.company.biz"), company.biz_number, sources.biz_number)}
           ${infoTile("users", t("result.company.ceo"), company.ceo, sources.ceo)}
