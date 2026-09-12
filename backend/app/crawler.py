@@ -54,6 +54,23 @@ PRIORITY_PATTERNS: dict[str, tuple[str, ...]] = {
 
 CATEGORY_WEIGHT = {"recruitment": 40, "management": 34, "company": 30, "contact": 28}
 
+# Site đa ngôn ngữ (lgcns.com/kr, /en, /jp): bản tiếng Hàn là bản đầy đủ nhất
+# (대표이사, 사업자등록번호, 채용) và extractor được viết cho tiếng Hàn. Link sang
+# thư mục ngôn ngữ khác bị trừ điểm để xếp sau mọi trang tiếng Hàn — vẫn crawl
+# nếu còn hạn mức, nên site chỉ có tiếng Anh không bị ảnh hưởng.
+KOREAN_LANG_SEGMENTS = {"kr", "ko", "kor", "korean", "ko-kr"}
+FOREIGN_LANG_SEGMENTS = {
+    "en", "eng", "english", "en-us", "en-gb", "us", "uk", "global",
+    "jp", "ja", "jpn", "japanese", "ja-jp",
+    "cn", "zh", "chn", "chinese", "zh-cn", "zh-tw", "tw",
+    "vi", "vn", "vie", "de", "fr", "es", "ru", "th", "id",
+}
+FOREIGN_LANG_PENALTY = 30
+
+# Một site có thể có hàng chục trang tin tuyển dụng; không để chúng chiếm hết
+# hạn mức trước khi tới trang công ty / lãnh đạo.
+MAX_RECRUITMENT_PAGES = 8
+
 SKIP_EXTENSIONS = (
     ".pdf", ".jpg", ".jpeg", ".png", ".gif", ".webp", ".svg", ".ico", ".zip", ".rar",
     ".exe", ".dmg", ".mp4", ".mp3", ".avi", ".mov", ".hwp", ".doc", ".docx", ".xls",
@@ -256,6 +273,35 @@ def _token_in(token: str, haystack: str) -> bool:
     return token in haystack
 
 
+def _lang_segment(url: str) -> str | None:
+    """Thư mục ngôn ngữ đứng đầu path ("/kr/company" -> "kr"), nếu có."""
+    path = (urlsplit(url).path or "/").lower()
+    first = path.strip("/").split("/", 1)[0] if path.strip("/") else ""
+    if first in KOREAN_LANG_SEGMENTS or first in FOREIGN_LANG_SEGMENTS:
+        return first
+    return None
+
+
+def foreign_language_link(url: str, home_url: str) -> bool:
+    """Link thuộc thư mục ngôn ngữ khác với trang chủ (hoặc không phải tiếng Hàn)."""
+    link_lang = _lang_segment(url)
+    if link_lang is None:
+        return False
+    home_lang = _lang_segment(home_url)
+    if home_lang is None:
+        return link_lang in FOREIGN_LANG_SEGMENTS
+    return link_lang != home_lang
+
+
+def foreign_language_sitemap(url: str) -> int:
+    """1 nếu tên file sitemap chỉ ra ngôn ngữ không phải tiếng Hàn (en-sitemap, jp...)."""
+    name = (urlsplit(url).path or "").lower().rsplit("/", 1)[-1]
+    tokens = set(re.split(r"[^a-z]+", name)) - {""}
+    if tokens & KOREAN_LANG_SEGMENTS:
+        return 0
+    return 1 if tokens & FOREIGN_LANG_SEGMENTS else 0
+
+
 def classify_link(url: str, anchor_text: str) -> str | None:
     """Return the priority category for a link, or None if it is not interesting."""
     split = urlsplit(url)
@@ -265,8 +311,18 @@ def classify_link(url: str, anchor_text: str) -> str | None:
     # article title and its wording must not decide the category.
     if len(anchor) > NAV_ANCHOR_MAX:
         anchor = ""
+    segments = {
+        segment.rsplit(".", 1)[0] for segment in (split.path or "").lower().split("/") if segment
+    }
     for category in ("recruitment", "management", "company", "contact"):
         for token in PRIORITY_PATTERNS[category]:
+            if category == "management" and token.isascii() and token not in ("ceo", "cto", "cio"):
+                # "management" / "team" / "board" xuất hiện trong tên sản phẩm
+                # ("process-management", "team-collaboration"): chỉ nhận khi là
+                # nguyên một đoạn path hoặc là nhãn của link.
+                if token in segments or _token_in(token, anchor):
+                    return category
+                continue
             if _token_in(token, target) or _token_in(token, anchor):
                 return category
     return None
@@ -504,8 +560,15 @@ class Crawler:
 
         found: dict[str, tuple[str, int]] = {}
         checked = 0
-        while candidates and checked < 4:
+        visited: set[str] = set()
+        while candidates and checked < 6:
+            # Site đa ngôn ngữ có sitemap riêng cho từng tiếng: đọc bản tiếng Hàn
+            # trước, bản nước ngoài để cuối - hạn mức file có thể không tới lượt.
+            candidates.sort(key=lambda url: (foreign_language_sitemap(url), 0))
             sitemap_url = candidates.pop(0)
+            if sitemap_url in visited:
+                continue
+            visited.add(sitemap_url)
             checked += 1
             try:
                 validate_url(sitemap_url)
@@ -519,7 +582,7 @@ class Crawler:
             is_index = "<sitemapindex" in body.lower()
             for location in locations:
                 if is_index:
-                    if len(candidates) < 4:
+                    if location not in visited and location not in candidates and len(candidates) < 8:
                         candidates.append(location)
                     continue
                 url = clean_link(sitemap_url, location)
@@ -614,13 +677,16 @@ class Crawler:
             covered = self._covered_by_footer(home)
             penalty = {category: (25 if category in covered else 0) for category in CATEGORY_WEIGHT}
 
+            def lang_penalty(url: str) -> int:
+                return FOREIGN_LANG_PENALTY if foreign_language_link(url, home.final_url) else 0
+
             frontier: list[tuple[int, str, str, int]] = [
-                (score - penalty.get(category, 0), url, category, 1)
+                (score - penalty.get(category, 0) - lang_penalty(url), url, category, 1)
                 for url, category, score in self._collect_links(home)
             ]
             # Careers pages are often absent from the nav but present in sitemap.xml.
             for url, category, score in await self._discover_from_sitemap(client, home.final_url):
-                frontier.append((score, url, category, 1))
+                frontier.append((score - lang_penalty(url), url, category, 1))
 
             stage_messages = {
                 "company": ("company", "Đang tìm trang công ty..."),
@@ -629,16 +695,26 @@ class Crawler:
                 "recruitment": ("recruitment", "Đang tìm tuyển dụng..."),
             }
             announced: set[str] = set()
+            recruitment_pages = 0
+            cap_recruitment = True
+            deferred: list[tuple[int, str, str, int]] = []   # tin tuyển dụng vượt hạn mức, đọc sau cùng
 
-            while frontier and len(result.pages) < MAX_PAGES:
+            while (frontier or deferred) and len(result.pages) < MAX_PAGES:
+                if not frontier:
+                    frontier, deferred, cap_recruitment = deferred, [], False
                 frontier.sort(key=lambda item: -item[0])
                 _score, url, category, depth = frontier.pop(0)
                 key = self._dedupe_key(url)
                 if key in self._seen:
                     continue
+                if cap_recruitment and category == "recruitment" and recruitment_pages >= MAX_RECRUITMENT_PAGES:
+                    deferred.append((_score, url, category, depth))
+                    continue
                 self._seen.add(key)
                 if depth > MAX_DEPTH:
                     continue
+                if category == "recruitment":
+                    recruitment_pages += 1
 
                 if category not in announced:
                     announced.add(category)
@@ -659,7 +735,7 @@ class Crawler:
                         # Job detail pages under a recruitment index are the useful ones.
                         bonus = 6 if child_category == category == "recruitment" else 0
                         frontier.append(
-                            (child_score + bonus - 5, child_url, child_category, depth + 1)
+                            (child_score + bonus - 5 - lang_penalty(child_url), child_url, child_category, depth + 1)
                         )
 
             # Nhieu site khong dat thong tin o trang chu va cung khong dat ten

@@ -220,6 +220,15 @@ check("industry found", result["company"]["industry"] is not None)
 check("biz number from footer", result["company"]["biz_number"] == "120-81-12345", f'-> {result["company"]["biz_number"]!r}')
 check("biz number carries a source", result["company_sources"]["biz_number"] == "https://test.co.kr/")
 check("CEO label from footer", result["company"]["ceo"] == "김철수", f'-> {result["company"]["ceo"]!r}')
+
+# 대표이사 사장 현 신 균 (chức danh kép, tên viết cách) — trang CEO 인사말 kiểu LG CNS.
+compound = CrawlResult(start_url="https://big.co.kr/", base_domain="big.co.kr")
+compound.pages = [make_page("https://big.co.kr/ceo", "<html><body><p>고객이 있기에 우리가 있습니다.</p><p>빅 대표이사 사장 현 신 균</p><p>끝</p></body></html>", category="management")]
+compound_result = build_result(compound)
+check("CEO behind compound title", compound_result["company"]["ceo"] == "현신균", f'-> {compound_result["company"]["ceo"]!r}')
+check("contact behind compound title", [c["name"] for c in compound_result["key_contacts"]] == ["현신균"],
+      f'-> {compound_result["key_contacts"]}')
+check("name never spans lines", not _plausible_name("현신균\n끝"))
 check("CEO found", [c["name"] for c in result["key_contacts"]] == ["김철수"],
       f'-> {result["key_contacts"]}')
 check("contact carries a source", all(c["source_url"].startswith("https://test.co.kr") for c in result["key_contacts"]))
@@ -257,6 +266,14 @@ check("hint: contact form only", formed_result["company_hints"].get("email", {})
       f'-> {formed_result["company_hints"]}')
 check("hint points at the form page", formed_result["company_hints"]["email"]["url"] == "https://form.co.kr/contact")
 check("no hint when email was found", result["company_hints"] == {})
+
+# JSON-LD của blog: author là Person, publisher là Organization — chỉ publisher là tên công ty.
+blog = CrawlResult(start_url="https://blog.co.kr/", base_domain="blog.co.kr")
+blog.pages = [make_page("https://blog.co.kr/", """<html><head><title>기술블로그</title>
+<script type="application/ld+json">{"@graph":[{"@type":["Article","BlogPosting"],"author":{"@type":"Person","name":"김혜진"},
+"publisher":{"@type":"Organization","name":"오픈소스컨설팅"}}]}</script></head><body><p>글</p></body></html>""")]
+check("JSON-LD: organization name, not the author", build_result(blog)["company"]["name"] == "오픈소스컨설팅",
+      f'-> {build_result(blog)["company"]["name"]!r}')
 check("empty ceo is None", empty_result["company"]["ceo"] is None)
 check("empty contacts", empty_result["key_contacts"] == [])
 check("empty recruitment", empty_result["it_recruitment"] == [])

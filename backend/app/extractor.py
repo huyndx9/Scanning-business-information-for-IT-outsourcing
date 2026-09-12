@@ -7,6 +7,7 @@ renders "Not found".
 """
 from __future__ import annotations
 
+import json
 import re
 from dataclasses import dataclass
 from urllib.parse import urlsplit
@@ -80,6 +81,8 @@ BIZ_NUMBER_LABELS = ("사업자등록번호", "사업자 등록번호", "사업�
                      "business registration number", "business registration no", "business license")
 BIZ_NUMBER_RE = re.compile(r"(\d{3})\s*-?\s*(\d{2})\s*-?\s*(\d{5})(?!\d)")
 CEO_LABELS = ("대표이사", "대표자", "대표자명", "대표", "ceo", "representative")
+# Chức danh phụ đứng sau 대표이사: "대표이사 사장 홍길동", "대표이사 부회장 홍길동".
+SECONDARY_TITLE_RE = r"(?:\s*(?:사장|부사장|회장|부회장|전무|상무|이사))?"
 FAX_LABELS = ("팩스", "fax", "f.")
 
 # The lookarounds matter: without them a run of years ("2010 2019 2000")
@@ -158,7 +161,7 @@ EXCLUDED_TITLE_TOKENS = (
 
 # Ten Han: cho phep khoang trang giua cac am tiet vi nhieu site viet "박 한".
 # Do dai va tinh hop le duoc kiem tra ky trong _plausible_name().
-KOREAN_NAME_RE = r"[가-힣](?:\s?[가-힣]){1,3}"
+KOREAN_NAME_RE = r"[가-힣](?: ?[가-힣]){1,3}"
 
 # Ho kep - dieu kien duy nhat de mot ten dai 4 am tiet la ten nguoi that.
 KOREAN_COMPOUND_SURNAMES = (
@@ -344,6 +347,39 @@ def _title_candidate(page: Page) -> str | None:
     return candidate
 
 
+ORGANIZATION_TYPES = {"organization", "corporation", "localbusiness", "ngo", "educationalorganization"}
+
+
+def _organization_names(raw: str) -> list[str]:
+    """Tên của đúng các đối tượng @type Organization trong JSON-LD.
+
+    Blog WordPress đặt author (Person) và publisher (Organization) chung một
+    @graph; đọc bằng regex sẽ lấy nhầm tên tác giả bài viết làm tên công ty.
+    """
+    try:
+        data = json.loads(raw)
+    except (json.JSONDecodeError, TypeError):
+        return []
+    names: list[str] = []
+
+    def walk(node) -> None:
+        if isinstance(node, dict):
+            types = node.get("@type")
+            types = types if isinstance(types, list) else [types]
+            if any(isinstance(t, str) and t.lower() in ORGANIZATION_TYPES for t in types):
+                name = node.get("name") or node.get("legalName")
+                if isinstance(name, str):
+                    names.append(name)
+            for value in node.values():
+                walk(value)
+        elif isinstance(node, list):
+            for item in node:
+                walk(item)
+
+    walk(data)
+    return names
+
+
 def extract_company(crawl: CrawlResult) -> dict:
     """Multi-signal company identity check (spec section 11)."""
     pages = _page_priority(crawl.pages, ("home", "company", "contact"))
@@ -367,9 +403,8 @@ def extract_company(crawl: CrawlResult) -> dict:
 
         for script in soup.find_all("script", attrs={"type": "application/ld+json"}):
             raw = script.string or script.get_text() or ""
-            for match in re.finditer(r'"name"\s*:\s*"([^"]{2,60})"', raw):
-                if '"Organization"' in raw or '"Corporation"' in raw or '"LocalBusiness"' in raw:
-                    add(match.group(1), 6, source)
+            for name in _organization_names(raw):
+                add(name, 6, source)
 
         meta_site = soup.find("meta", attrs={"property": "og:site_name"})
         if meta_site:
@@ -544,7 +579,7 @@ def extract_ceo(crawl: CrawlResult) -> Evidence | None:
     for text, source_url in _text_sources(crawl, ("contact", "company", "home")):
         for label in CEO_LABELS:
             needs_colon = label in ("대표", "ceo")
-            separator = r"\s*[:：]\s*" if needs_colon else r"\s*[:：]?\s*"
+            separator = r"\s*[:：]\s*" if needs_colon else SECONDARY_TITLE_RE + r"\s*[:：]?\s*"
             pattern = re.compile(
                 r"(?<![가-힣A-Za-z])" + re.escape(label) + separator + rf"(?P<name>{name_alternation})(?![가-힣])",
                 re.I,
@@ -552,7 +587,7 @@ def extract_ceo(crawl: CrawlResult) -> Evidence | None:
             for match in pattern.finditer(text):
                 name = match.group("name").strip()
                 if _plausible_name(name):
-                    return Evidence(re.sub(r"\s+", " ", name), source_url)
+                    return Evidence(_display_name(name), source_url)
     return None
 
 
@@ -784,6 +819,13 @@ def _plausible_name(name: str) -> bool:
     return False
 
 
+def _display_name(name: str) -> str:
+    """Tên Hàn viết cách trong chữ ký ("현 신 균") -> dạng thường dùng "현신균"."""
+    if re.fullmatch(KOREAN_NAME_RE, name):
+        return re.sub(r"\s+", "", name)
+    return re.sub(r"\s+", " ", name).strip()
+
+
 def extract_key_contacts(crawl: CrawlResult, company_name: str | None = None) -> list[dict]:
     """At most 3 IT/decision-maker contacts, each with a source URL."""
     found: dict[str, tuple[int, str, str, str]] = {}  # name -> (rank, name, position, source)
@@ -804,9 +846,9 @@ def extract_key_contacts(crawl: CrawlResult, company_name: str | None = None) ->
     name_alternation = f"(?:{KOREAN_NAME_RE}|{ENGLISH_NAME_RE})"
 
     patterns = [
-        # 대표이사 홍길동 / CTO John Smith
+        # 대표이사 홍길동 / 대표이사 사장 홍길동 / CTO John Smith
         re.compile(
-            rf"(?<![가-힣])(?P<title>{title_alternation})\s*[:：]?\s*"
+            rf"(?<![가-힣])(?P<title>{title_alternation}){SECONDARY_TITLE_RE}\s*[:：]?\s*"
             rf"(?P<name>{name_alternation})(?![가-힣])",
             re.I,
         ),
@@ -874,7 +916,7 @@ def extract_key_contacts(crawl: CrawlResult, company_name: str | None = None) ->
             break
 
     return [
-        {"name": name, "position": position, "source_url": source}
+        {"name": _display_name(name), "position": position, "source_url": source}
         for _rank, name, position, source in deduped
     ]
 
