@@ -152,6 +152,12 @@ async def main() -> int:
         if await page.locator("#crm-rows tr").count() > 0:
             await shot_viewport(page, "12-crm-table.png")
 
+            # Phễu chuyển đổi (mặc định thu gọn)
+            await page.evaluate("document.getElementById('crm-funnel').open = true")
+            await page.wait_for_timeout(300)
+            await shot_full_clip(page, "20-crm-funnel.png", ["#crm-funnel"], pad=0)
+            await page.evaluate("document.getElementById('crm-funnel').open = false")
+
             # Modal cao hơn viewport và nằm trên lớp phủ cố định, nên nới viewport
             # rồi chụp riêng phần tử thay vì cắt từ ảnh full-page.
             await page.set_viewport_size({"width": 1280, "height": 1900})

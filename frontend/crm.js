@@ -21,6 +21,10 @@
     activity: ["call", "email", "kakao", "meeting", "proposal", "quote", "other"],
   };
   const HOT_SCORE = 80;
+  // Cột có thể ẩn; 기술스택 ẩn mặc định để bảng vừa laptop 13" (tech hiện ở tooltip tên công ty).
+  const TOGGLABLE_COLUMNS = ["source", "tech", "budget", "timing", "score", "status", "next"];
+  const COLUMNS_KEY = "company-scanner-crm-columns";
+  const DEFAULT_HIDDEN = ["tech"];
 
   const $ = (id) => document.getElementById(id);
 
@@ -47,6 +51,11 @@
   const tableWrap = $("crm-table-wrap");
 
   let leads = [];
+  let hiddenColumns = new Set(DEFAULT_HIDDEN);
+  try {
+    const stored = JSON.parse(localStorage.getItem(COLUMNS_KEY) || "null");
+    if (Array.isArray(stored)) hiddenColumns = new Set(stored.filter((c) => TOGGLABLE_COLUMNS.includes(c)));
+  } catch (_) { /* mặc định */ }
   let customersByKey = {};    // khách đã ký, khoá domain / tên thường: để gắn "기존 고객" lên lead
   let quick = "all";          // all | hot | overdue | week
   let statusFilter = "";      // "" = tất cả
@@ -60,17 +69,7 @@
   const label = (group, code) => (code ? t(`crm.${group}.${code}`) : "");
   const statusLabel = (code) => label("status", code);
 
-  function fmtKRW(amount) {
-    if (amount === null || amount === undefined || amount === "") return "";
-    const value = Number(amount);
-    if (!Number.isFinite(value) || value <= 0) return "";
-    if (value >= 100000000) {
-      const eok = value / 100000000;
-      return `₩ ${eok % 1 === 0 ? eok : eok.toFixed(1)}${t("crm.unit.eok")}`;
-    }
-    if (value >= 10000) return `₩ ${Math.round(value / 10000).toLocaleString()}${t("crm.unit.man")}`;
-    return `₩ ${value.toLocaleString()}`;
-  }
+  const fmtKRW = (amount) => formatKRW(amount);
 
   function todayIso() {
     const now = new Date();
@@ -98,6 +97,16 @@
     return score >= HOT_SCORE ? "emerald" : score >= 50 ? "amber" : "rose";
   }
 
+  function breakdownText(lead) {
+    const parts = (lead.score_breakdown || []).map((part) => `${t("crm.score." + part.key)} +${part.points}`);
+    return parts.length ? `${t("crm.form.scoreWhy")}: ${parts.join(" · ")}` : "";
+  }
+
+  function fullWon(amount) {
+    const value = Number(amount);
+    return Number.isFinite(value) && value > 0 ? `${value.toLocaleString()}원` : "";
+  }
+
   function pill(text, tone = "slate") {
     return `<span class="crm-pill crm-pill-${tone}">${esc(text)}</span>`;
   }
@@ -105,7 +114,7 @@
   function statusSelect(lead) {
     const options = STATUSES.map((code) =>
       `<option value="${code}" ${code === lead.status ? "selected" : ""}>${esc(statusLabel(code))}</option>`).join("");
-    return `<select class="crm-status crm-status-${STATUS_TONE[lead.status]}" data-status-for="${lead.id}">${options}</select>`;
+    return `<span class="crm-status-wrap crm-status-${STATUS_TONE[lead.status]}"><select class="crm-status" data-status-for="${lead.id}" title="${esc(t("crm.statusChange"))}">${options}</select></span>`;
   }
 
   function fillSelect(select, group, blank) {
@@ -171,6 +180,47 @@
     }
   }
 
+  // -- Phễu (funnel) -----------------------------------------------------------------
+
+  let stats = null;
+
+  async function loadStats() {
+    try {
+      stats = await api("/api/leads/stats");
+    } catch (_) {
+      stats = null;
+    }
+    renderFunnel();
+  }
+
+  function renderFunnel() {
+    const box = $("crm-funnel-body");
+    if (!box) return;
+    if (!stats || !stats.total) {
+      box.innerHTML = `<div class="crm-empty">${esc(t("crm.funnel.empty"))}</div>`;
+      return;
+    }
+    const max = Math.max(1, ...stats.stages.map((s) => s.reached));
+    box.innerHTML = `<div class="crm-funnel-grid">${stats.stages.map((row, index) => {
+      const width = Math.max(4, Math.round((row.reached / max) * 100));
+      const dropNote = row.lost || row.hold
+        ? `<span class="crm-funnel-lost" title="${esc(t("crm.funnel.lostTitle"))}">${esc(t("crm.funnel.lost", { lost: row.lost, hold: row.hold }))}</span>` : "";
+      return `<div class="crm-funnel-row">
+        <div class="crm-funnel-label"><span class="crm-dot crm-dot-${STATUS_TONE[row.stage]}"></span>${esc(statusLabel(row.stage))}</div>
+        <div class="crm-funnel-bar-wrap"><div class="crm-funnel-bar crm-funnel-bar-${STATUS_TONE[row.stage]}" style="width:${width}%"></div>
+          <span class="crm-funnel-count">${esc(t("crm.funnel.reached", { count: row.reached, now: row.now }))}</span></div>
+        <div class="crm-funnel-meta">
+          ${row.conversion !== null && row.conversion !== undefined ? `<span class="crm-funnel-conv">→ ${row.conversion}%</span>` : `<span class="crm-funnel-conv crm-funnel-won">${esc(t("crm.funnel.goal"))}</span>`}
+          ${row.avg_days !== null && row.avg_days !== undefined ? `<span class="crm-meta">${esc(t("crm.funnel.avgDays", { days: row.avg_days }))}</span>` : ""}
+          ${dropNote}
+        </div>
+      </div>`;
+    }).join("")}</div>
+    <div class="crm-funnel-foot">${esc(stats.velocity_days !== null && stats.velocity_days !== undefined
+      ? t("crm.funnel.velocity", { days: stats.velocity_days, won: stats.won })
+      : t("crm.funnel.velocityNone"))}</div>`;
+  }
+
   // -- KPI ----------------------------------------------------------------------
 
   function renderKpis() {
@@ -184,17 +234,21 @@
     const hot = newThisMonth.filter((lead) => lead.score >= HOT_SCORE).length;
     const overdue = leads.filter(isOverdue).length;
 
-    const tile = (labelText, value, sub, tone = "") => `<div class="crm-kpi">
+    // Ô KPI bấm được: đặt luôn bộ lọc tương ứng (연체 -> chỉ lead quá hạn...).
+    const tile = (labelText, value, sub, tone = "", quickKey = "") => `<div class="crm-kpi ${quickKey ? "crm-kpi-click" : ""}" ${quickKey ? `data-kpi-quick="${quickKey}" title="${esc(t("crm.kpi.clickHint"))}"` : ""}>
       <div class="crm-kpi-label">${esc(labelText)}</div>
       <div class="crm-kpi-value ${tone === "danger" ? "crm-kpi-danger" : ""}">${esc(value)}</div>
       <div class="crm-kpi-sub ${tone === "danger" ? "crm-kpi-danger" : "crm-kpi-ok"}">${esc(sub)}</div>
     </div>`;
 
     $("crm-kpis").innerHTML =
-      tile(t("crm.kpi.pipeline"), fmtKRW(pipeline) || "₩ 0", t("crm.kpi.pipelineSub", { count: open.length })) +
-      tile(t("crm.kpi.winRate"), closed ? `${Math.round((won / closed) * 100)}%` : "—", t("crm.kpi.winRateSub", { won, closed })) +
-      tile(t("crm.kpi.newMonth"), String(newThisMonth.length), t("crm.kpi.newMonthSub", { count: hot })) +
-      tile(t("crm.kpi.overdue"), String(overdue), overdue ? t("crm.kpi.overdueSub") : t("crm.kpi.overdueNone"), overdue ? "danger" : "");
+      tile(t("crm.kpi.pipeline"), fmtKRW(pipeline) || "₩ 0", t("crm.kpi.pipelineSub", { count: open.length }), "", "all") +
+      tile(t("crm.kpi.winRate"), closed ? `${Math.round((won / closed) * 100)}%` : "—",
+        stats && stats.velocity_days !== null && stats.velocity_days !== undefined
+          ? t("crm.kpi.winRateVelocity", { won, closed, days: stats.velocity_days })
+          : t("crm.kpi.winRateSub", { won, closed })) +
+      tile(t("crm.kpi.newMonth"), String(newThisMonth.length), t("crm.kpi.newMonthSub", { count: hot }), "", "hot") +
+      tile(t("crm.kpi.overdue"), String(overdue), overdue ? t("crm.kpi.overdueSub") : t("crm.kpi.overdueNone"), overdue ? "danger" : "", "overdue");
   }
 
   // -- Bảng ---------------------------------------------------------------------
@@ -231,10 +285,13 @@
       label("project", lead.project_type),
     ].filter(Boolean).join(" · ");
 
+    const techTitle = (lead.tech || []).length ? `${t("crm.col.tech")}: ${lead.tech.join(", ")}` : "";
+    const col = (name) => (hiddenColumns.has(name) ? ' class="crm-col-hidden"' : "");
+    const phoneHref = lead.mobile || lead.phone ? `tel:${(lead.mobile || lead.phone).replace(/[^\d+]/g, "")}` : "";
     return `<tr data-id="${lead.id}" class="${overdue ? "crm-row-overdue" : ""} ${selected.has(lead.id) ? "crm-row-selected" : ""}">
       <td class="crm-td-check"><input type="checkbox" data-select="${lead.id}" ${selected.has(lead.id) ? "checked" : ""}></td>
       <td>
-        <div class="crm-strong crm-clip" title="${esc(lead.company_name)}">${esc(lead.company_name)}</div>
+        <div class="crm-strong crm-clip" title="${esc([lead.company_name, techTitle].filter(Boolean).join("\n"))}">${esc(lead.company_name)}</div>
         <div class="crm-meta">${esc(meta)}${customerOf(lead) ? ` <a href="${customerLink(customerOf(lead))}" class="crm-customer-pill" title="${esc(t("crm.existingCustomerTitle"))}">${esc(t("crm.existingCustomer", { grade: customerOf(lead).grade }))}</a>` : ""}</div>
       </td>
       <td>
@@ -246,25 +303,45 @@
           </div>
         </div>
       </td>
-      <td>${pill(label("source", lead.source), "source")}</td>
-      <td><div class="crm-pills">${tech || `<span class="saved-muted">—</span>`}</div></td>
-      <td class="crm-strong crm-nowrap">${fmtKRW(lead.budget) || `<span class="saved-muted">—</span>`}</td>
-      <td>${timing}<div class="crm-meta">${esc(timingMeta)}</div></td>
-      <td>
-        <div class="crm-score-cell">
-          <span class="crm-ring crm-ring-${scoreTone(lead.score)}">${lead.score}</span>
-          ${lead.score >= HOT_SCORE ? `<span class="crm-hot">${esc(t("crm.hot"))}</span>` : ""}
-        </div>
+      <td${col("source")}>${lead.source === "scanner" && lead.company_id
+        ? `<a href="/?company=${lead.company_id}" class="crm-pill crm-pill-source crm-pill-link" title="${esc(t("crm.sourceScanLink"))}">${esc(label("source", lead.source))} ${icon("external", 10)}</a>`
+        : pill(label("source", lead.source), "source")}</td>
+      <td${col("tech")}><div class="crm-pills">${tech || `<span class="saved-muted">—</span>`}</div></td>
+      <td class="crm-strong crm-nowrap${hiddenColumns.has("budget") ? " crm-col-hidden" : ""}" title="${esc(fullWon(lead.budget))}">${fmtKRW(lead.budget) || `<span class="saved-muted">—</span>`}</td>
+      <td${col("timing")}>${timing}<div class="crm-meta">${esc(timingMeta)}</div></td>
+      <td${col("score")}>
+        <span class="crm-ring crm-ring-${scoreTone(lead.score)}" title="${esc(breakdownText(lead))}">${lead.score}</span>
       </td>
-      <td>${statusSelect(lead)}</td>
-      <td class="${overdue ? "crm-next-overdue" : "crm-next"}">
+      <td${col("status")}>${statusSelect(lead)}${lead.days_in_stage !== null && lead.days_in_stage !== undefined && OPEN_STATUSES.includes(lead.status)
+        ? `<div class="crm-meta crm-stage-days ${lead.days_in_stage >= 14 ? "crm-stage-stale" : ""}" title="${esc(t("crm.stageSinceTitle", { date: (lead.stage_since || "").slice(0, 10) }))}">${esc(t("crm.stageDays", { days: lead.days_in_stage }))}</div>` : ""}</td>
+      <td class="${overdue ? "crm-next-overdue" : "crm-next"}${hiddenColumns.has("next") ? " crm-col-hidden" : ""}">
         ${overdue ? `${icon("alert", 13)} ${esc(t("crm.overdueTag"))} · ` : ""}${lead.next_date ? esc(lead.next_date) : `<span class="saved-muted">—</span>`}
         ${lead.next_action ? `<div class="crm-meta crm-clip" title="${esc(lead.next_action)}">${esc(lead.next_action)}</div>` : ""}
+      </td>
+      <td class="crm-td-actions">
+        <div class="crm-quick">
+          ${phoneHref ? `<a href="${esc(phoneHref)}" class="crm-quick-btn" title="${esc(t("crm.quick.call", { number: lead.mobile || lead.phone }))}">${icon("phone", 14)}</a>` : ""}
+          ${lead.email ? `<button type="button" class="crm-quick-btn" data-quick-mail="${lead.id}" title="${esc(t("crm.quick.mail", { email: lead.email }))}">${icon("mail", 14)}</button>` : ""}
+          ${lead.kakao ? `<button type="button" class="crm-quick-btn" data-quick-kakao="${esc(lead.kakao)}" title="${esc(t("crm.quick.kakao", { id: lead.kakao }))}">${icon("chat", 14)}</button>` : ""}
+          <button type="button" class="crm-quick-btn" data-quick-log="${lead.id}" title="${esc(t("crm.quick.log"))}">${icon("note", 14)}</button>
+        </div>
       </td>
     </tr>`;
   }
 
+  function applyColumnVisibility() {
+    document.querySelectorAll(".crm-table th[data-col]").forEach((th) => {
+      th.classList.toggle("crm-col-hidden", hiddenColumns.has(th.dataset.col));
+    });
+  }
+
+  function renderColumnsMenu() {
+    $("crm-columns-menu").innerHTML = TOGGLABLE_COLUMNS.map((name) => `<label class="crm-menu-item crm-menu-check">
+      <input type="checkbox" data-col-toggle="${name}" ${hiddenColumns.has(name) ? "" : "checked"}> ${esc(t("crm.col." + name))}</label>`).join("");
+  }
+
   function renderTable(list) {
+    applyColumnVisibility();
     rows.innerHTML = list.map(renderRow).join("");
     emptyBox.classList.toggle("hidden", list.length > 0);
     if (list.length === 0) {
@@ -277,28 +354,44 @@
 
   // -- Kanban -------------------------------------------------------------------
 
-  function renderKanban(list) {
-    const card = (lead) => `<div class="crm-kcard" draggable="true" data-id="${lead.id}">
-      <div class="crm-strong crm-clip">${esc(lead.company_name)}</div>
-      <div class="crm-meta crm-clip">${esc([lead.contact_name, label("rank", lead.rank)].filter(Boolean).join(" · ") || "—")}</div>
-      <div class="crm-pills mt-2">${(lead.tech || []).slice(0, 2).map((item) => pill(item, "tech")).join("")}</div>
-      <div class="crm-kcard-foot">
-        <span class="crm-strong">${fmtKRW(lead.budget) || "—"}</span>
-        <span class="crm-ring crm-ring-sm crm-ring-${scoreTone(lead.score)}">${lead.score}</span>
-      </div>
-      ${isOverdue(lead) ? `<div class="crm-next-overdue crm-meta">${icon("alert", 11)} ${esc(t("crm.overdueTag"))} · ${esc(lead.next_date)}</div>` : ""}
-    </div>`;
+  let expandedClosed = new Set();   // cột 실패/보류 đang mở rộng
 
-    kanban.innerHTML = KANBAN_COLUMNS.map((code) => {
+  function renderKanban(list) {
+    const card = (lead) => {
+      const overdue = isOverdue(lead);
+      return `<div class="crm-kcard" draggable="true" data-id="${lead.id}">
+      <div class="crm-kcard-top">
+        <span class="crm-grip" title="${esc(t("crm.kanban.drag"))}">${icon("grip", 12)}</span>
+        <div class="crm-strong crm-clip">${esc(lead.company_name)}</div>
+        ${lead.assignee ? `<span class="crm-assignee" title="${esc(lead.assignee)}">${esc(initial(lead.assignee))}</span>` : ""}
+      </div>
+      <div class="crm-meta crm-clip">${esc([lead.contact_name, label("rank", lead.rank)].filter(Boolean).join(" · ") || "—")}</div>
+      ${lead.next_action || lead.next_date ? `<div class="crm-kcard-next ${overdue ? "crm-next-overdue" : ""}">${overdue ? icon("alert", 11) + " " : ""}${esc([lead.next_date, lead.next_action].filter(Boolean).join(" · "))}</div>` : ""}
+      <div class="crm-kcard-foot">
+        <span class="crm-strong" title="${esc(fullWon(lead.budget))}">${fmtKRW(lead.budget) || "—"}</span>
+        <span class="crm-ring crm-ring-sm crm-ring-${scoreTone(lead.score)}" title="${esc(breakdownText(lead))}">${lead.score}</span>
+      </div>
+    </div>`;
+    };
+
+    const column = (code, collapsed) => {
       const items = list.filter((lead) => lead.status === code);
-      return `<div class="crm-kcol" data-column="${code}">
-        <div class="crm-kcol-head">
+      const total = items.reduce((sum, lead) => sum + (Number(lead.budget) || 0), 0);
+      const empty = items.length === 0;
+      const open = !collapsed || expandedClosed.has(code);
+      return `<div class="crm-kcol ${empty ? "crm-kcol-empty" : ""} ${collapsed ? "crm-kcol-closed" : ""} ${collapsed && !open ? "crm-kcol-collapsed" : ""}" data-column="${code}">
+        <div class="crm-kcol-head" ${collapsed ? `data-expand="${code}" title="${esc(t("crm.kanban.toggle"))}"` : ""}>
           <span class="crm-dot crm-dot-${STATUS_TONE[code]}"></span>${esc(statusLabel(code))}
           <span class="crm-chip-count">${items.length}</span>
         </div>
-        <div class="crm-kcol-body">${items.map(card).join("")}</div>
+        ${open ? `<div class="crm-kcol-body">${items.map(card).join("")}</div>
+        <div class="crm-kcol-foot">${esc(t("crm.kanban.total", { count: items.length, value: fmtKRW(total) || "₩ 0" }))}</div>` : ""}
       </div>`;
-    }).join("") + `<div class="crm-kanban-note">${esc(t("crm.kanban.hidden"))}</div>`;
+    };
+
+    // 실패 / 보류 xếp dọc trong một cột hẹp ở cuối: vẫn kéo thả vào được, bấm để mở.
+    kanban.innerHTML = KANBAN_COLUMNS.map((code) => column(code, false)).join("") +
+      `<div class="crm-kcol-stack">${["lost", "hold"].map((code) => column(code, true)).join("")}</div>`;
   }
 
   kanban.addEventListener("dragstart", (event) => {
@@ -330,6 +423,13 @@
     await changeStatus(id, column.dataset.column);
   });
   kanban.addEventListener("click", (event) => {
+    const head = event.target.closest("[data-expand]");
+    if (head) {
+      const code = head.dataset.expand;
+      if (expandedClosed.has(code)) expandedClosed.delete(code); else expandedClosed.add(code);
+      render();
+      return;
+    }
     const card = event.target.closest(".crm-kcard");
     if (card) openLead(Number(card.dataset.id));
   });
@@ -381,6 +481,7 @@
       leads = (await api("/api/leads")).leads || [];
       selected = new Set([...selected].filter((id) => leads.some((lead) => lead.id === id)));
       render();
+      loadStats().then(render);
     } catch (_) {
       $("crm-count").textContent = t("crm.error.loadFailed");
     }
@@ -462,9 +563,7 @@
     const box = $("lead-customer");
     if (!box) return;
     if (!customer) { box.classList.add("hidden"); box.innerHTML = ""; return; }
-    const total = customer.total_value >= 100000000
-      ? `₩ ${(customer.total_value / 100000000).toFixed(1).replace(/\.0$/, "")}${t("crm.unit.eok")}`
-      : `₩ ${Math.round(customer.total_value / 10000).toLocaleString()}${t("crm.unit.man")}`;
+    const total = fmtKRW(customer.total_value) || "₩ 0";
     box.classList.remove("hidden");
     box.innerHTML = `${icon("handshake", 15)} <span>${esc(t("crm.existingCustomerBanner", {
       grade: customer.grade, total, count: customer.contract_count,
@@ -495,7 +594,7 @@
     </li>`).join("");
   }
 
-  async function openLead(id, overrides) {
+  async function openLead(id, overrides, focus) {
     leadError.classList.add("hidden");
     try {
       editing = await api(`/api/leads/${id}`);
@@ -522,6 +621,15 @@
     $("activity-form").elements.at.value = todayIso();
     renderActivities(editing.activities);
     showModal("lead-modal");
+    // Hành động nhanh từ bảng: nhảy thẳng tới phần cần dùng.
+    if (focus === "log") {
+      $("lead-activities").scrollIntoView({ block: "center" });
+      $("activity-form").elements.note.focus();
+    } else if (focus === "mail") {
+      mailPanel.classList.remove("hidden");
+      renderMail();
+      mailPanel.scrollIntoView({ block: "center" });
+    }
   }
 
   function openNewLead(prefill) {
@@ -550,6 +658,16 @@
     leadError.classList.add("hidden");
     try {
       const data = readForm();
+      if (!editing) {
+        // Thêm tay: cảnh báo nếu đã có lead cùng domain / email / tên công ty.
+        const query = new URLSearchParams({ company_name: data.company_name || "", email: data.email || "", website: data.website || "" });
+        const found = ((await api(`/api/leads/duplicates?${query}`)).leads || []);
+        if (found.length) {
+          const listText = found.slice(0, 3).map((d) => `• ${d.company_name} — ${statusLabel(d.status)}${d.contact_name ? " · " + d.contact_name : ""}`).join("\n");
+          const proceed = await askConfirm(t("crm.duplicateWarn", { count: found.length, list: listText }), t("crm.duplicateProceed"));
+          if (!proceed) { save.disabled = false; save.textContent = t("crm.form.save"); return; }
+        }
+      }
       const becameWon = data.status === "won" && (!editing || editing.status !== "won");
       let savedLead = null;
       if (editing) {
@@ -677,10 +795,45 @@
 
   // -- Sự kiện bảng -------------------------------------------------------------
 
-  rows.addEventListener("click", (event) => {
+  rows.addEventListener("click", async (event) => {
+    const mail = event.target.closest("[data-quick-mail]");
+    if (mail) { openLead(Number(mail.dataset.quickMail), null, "mail"); return; }
+    const log = event.target.closest("[data-quick-log]");
+    if (log) { openLead(Number(log.dataset.quickLog), null, "log"); return; }
+    const kakao = event.target.closest("[data-quick-kakao]");
+    if (kakao) {
+      try { await navigator.clipboard.writeText(kakao.dataset.quickKakao); toast(t("crm.quick.kakaoCopied", { id: kakao.dataset.quickKakao })); }
+      catch (_) { toast(kakao.dataset.quickKakao); }
+      return;
+    }
     if (event.target.closest("select, input, a, button")) return;
     const row = event.target.closest("tr[data-id]");
     if (row) openLead(Number(row.dataset.id));
+  });
+
+  // Ô KPI -> bộ lọc nhanh tương ứng.
+  $("crm-kpis").addEventListener("click", (event) => {
+    const tile = event.target.closest("[data-kpi-quick]");
+    if (!tile) return;
+    quick = tile.dataset.kpiQuick;
+    $("crm-quick").querySelectorAll(".crm-seg-btn").forEach((item) => item.classList.toggle("crm-seg-active", item.dataset.quick === quick));
+    render();
+  });
+
+  // Ẩn / hiện cột, nhớ trong trình duyệt.
+  const columnsBtn = $("crm-columns-btn");
+  const columnsMenu = $("crm-columns-menu");
+  columnsBtn.addEventListener("click", (event) => { event.stopPropagation(); renderColumnsMenu(); columnsMenu.classList.toggle("hidden"); });
+  columnsMenu.addEventListener("click", (event) => event.stopPropagation());
+  columnsMenu.addEventListener("change", (event) => {
+    const box = event.target.closest("[data-col-toggle]");
+    if (!box) return;
+    if (box.checked) hiddenColumns.delete(box.dataset.colToggle); else hiddenColumns.add(box.dataset.colToggle);
+    try { localStorage.setItem(COLUMNS_KEY, JSON.stringify([...hiddenColumns])); } catch (_) { /* bỏ qua */ }
+    render();
+  });
+  document.addEventListener("click", (event) => {
+    if (!event.target.closest("#crm-columns-menu") && !event.target.closest("#crm-columns-btn")) columnsMenu.classList.add("hidden");
   });
 
   rows.addEventListener("change", async (event) => {
@@ -905,6 +1058,7 @@
   window.addEventListener("langchange", () => {
     fillAllSelects();
     render();
+    renderFunnel();
     if (!leadModal.classList.contains("hidden") && editing) renderScore(editing);
   });
 

@@ -32,7 +32,7 @@ KEEP_AS_IS = {
     "lang.ko", "lang.vi", "saved.col.hiring", "csv.hiring",
     "result.company.email", "result.company.website",
     "saved.col.email", "saved.col.website", "csv.email", "csv.website", "batch.col.hiring",
-    "crm.source.linkedin", "crm.hot", "crm.form.email", "crm.form.website", "nav.crm",
+    "crm.source.linkedin", "crm.form.email", "crm.form.website", "nav.crm",
 }
 
 failures: list[str] = []
@@ -163,6 +163,21 @@ if still_vietnamese:
 else:
     ok("ban tieng Han khong lan tieng Viet")
 
+# Ban tieng Viet khong duoc lan tieng Han - tru cac chuoi co ly do:
+#   mau mail (nguoi nhan la nguoi Han), chuc danh (giu 직급 trong ngoac de xung ho),
+#   ten nut ngon ngu, va vi du ten cot / so tien nhap theo kieu Han.
+VI_HANGUL_ALLOWED_PREFIXES = ("crm.mail.", "crm.rank.")
+VI_HANGUL_ALLOWED = {
+    "lang.ko", "crm.import.hint", "crm.form.budgetHint", "cust.form.amountHint", "cust.form.monthlyHint",
+}
+leaked = sorted(key for key, value in vi_entries.items()
+                if HANGUL.search(value) and key not in VI_HANGUL_ALLOWED
+                and not key.startswith(VI_HANGUL_ALLOWED_PREFIXES))
+if leaked:
+    fail(f"ban tieng Viet con chu Han: {leaked}")
+else:
+    ok("ban tieng Viet khong lan chu Han (ngoai danh sach cho phep)")
+
 # -- Khoá dùng trong code có khớp từ điển không ----------------------------
 
 print("khoa dung trong code")
@@ -210,6 +225,7 @@ CUST_GROUPS = {
 for prefix, codes in CUST_GROUPS.items():
     used |= {f"{prefix}.{code}" for code in codes}
 used |= set(re.findall(r'\["\w+", "(cust\.[\w.]+)"\]', read("customers.js")))
+used |= {f"crm.col.{name}" for name in ("source", "tech", "budget", "timing", "score", "status", "next")}
 for group, codes in CRM_GROUPS.items():
     used |= {f"crm.{group}.{code}" for code in codes}
 # EXPORT_FIELDS trong crm.js: [["company_name", "crm.form.company"], ...] -> t(key) luc xuat file

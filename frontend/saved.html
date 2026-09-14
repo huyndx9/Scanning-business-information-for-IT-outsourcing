@@ -97,6 +97,7 @@
           <table class="saved-table">
             <thead>
               <tr>
+                <th class="saved-th-check"><input type="checkbox" id="saved-check-all"></th>
                 <th data-i18n="saved.col.name"></th>
                 <th data-i18n="saved.col.address"></th>
                 <th data-i18n="saved.col.phone"></th>
@@ -113,6 +114,14 @@
         </div>
 
         <div id="saved-empty" class="hidden saved-empty"></div>
+      </div>
+
+      <!-- Thanh thao tác hàng loạt: chọn nhiều công ty -> lead / xoá -->
+      <div id="saved-bulk" class="hidden crm-bulk">
+        <span id="saved-bulk-count" class="crm-bulk-label"></span>
+        <button id="saved-bulk-lead" class="crm-btn crm-btn-primary"><span data-icon="userplus" data-size="14"></span> <span data-i18n="saved.bulk.lead"></span></button>
+        <button id="saved-bulk-delete" class="crm-btn crm-btn-danger"><span data-icon="trash" data-size="14"></span> <span data-i18n="saved.bulk.delete"></span></button>
+        <button id="saved-bulk-clear" class="crm-btn"><span data-i18n="saved.bulk.clear"></span></button>
       </div>
 
       <div class="mt-14 text-center text-[11px] text-slate-400" data-i18n="footer.note"></div>

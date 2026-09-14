@@ -138,7 +138,20 @@ CREATE TABLE IF NOT EXISTS activities (
     created_at TEXT    NOT NULL
 );
 CREATE INDEX IF NOT EXISTS activities_lead ON activities(lead_id);
+-- Moi lan doi trang thai ghi mot dong: tu do tinh ty le chuyen doi tung buoc,
+-- so ngay o moi buoc va thoi gian tu lead -> 수주 (sales velocity).
+CREATE TABLE IF NOT EXISTS lead_status_history (
+    id          INTEGER PRIMARY KEY AUTOINCREMENT,
+    lead_id     INTEGER NOT NULL REFERENCES leads(id) ON DELETE CASCADE,
+    from_status TEXT,
+    to_status   TEXT    NOT NULL,
+    at          TEXT    NOT NULL
+);
+CREATE INDEX IF NOT EXISTS lead_status_history_lead ON lead_status_history(lead_id, at);
 """
+
+# Thu tu cac buoc mo trong phieu; 수주 la dich, 실패/보류 la ra khoi phieu.
+FUNNEL_STAGES = ("new", "contacted", "meeting", "proposal", "negotiation", "won")
 
 # Cot cho phep client gui len (khong co id / score / created_at).
 EDITABLE = (
@@ -171,7 +184,27 @@ def _open() -> sqlite3.Connection:
     connection = connect()
     connection.execute("PRAGMA foreign_keys=ON")   # xoa lead thi xoa ca hoat dong
     init_leads(connection)
+    _seed_history(connection)
     return connection
+
+
+def _seed_history(connection: sqlite3.Connection) -> None:
+    """Lead co truoc khi co bang lich su: ghi mot dong (None -> trang thai hien tai)
+    tai created_at de ty le chuyen doi khong bo sot ho."""
+    connection.execute(
+        """
+        INSERT INTO lead_status_history (lead_id, from_status, to_status, at)
+        SELECT id, NULL, status, created_at FROM leads
+        WHERE id NOT IN (SELECT lead_id FROM lead_status_history)
+        """
+    )
+
+
+def _record_status(connection: sqlite3.Connection, lead_id: int, from_status: str | None, to_status: str) -> None:
+    connection.execute(
+        "INSERT INTO lead_status_history (lead_id, from_status, to_status, at) VALUES (?, ?, ?, ?)",
+        (lead_id, from_status, to_status, _now()),
+    )
 
 
 # -- Chuan hoa ---------------------------------------------------------------
@@ -568,7 +601,19 @@ def _write(connection: sqlite3.Connection, lead: dict, lead_id: int | None) -> i
 def list_leads() -> list[dict]:
     with closing(_open()) as connection, connection:
         rows = connection.execute("SELECT * FROM leads ORDER BY updated_at DESC, id DESC").fetchall()
-    return [_row_to_lead(row) for row in rows]
+    leads = [_row_to_lead(row) for row in rows]
+    with closing(_open()) as connection, connection:
+        since_rows = connection.execute(
+            "SELECT lead_id, MAX(at) AS at FROM lead_status_history GROUP BY lead_id"
+        ).fetchall()
+    since = {row["lead_id"]: row["at"] for row in since_rows}
+    today = datetime.now(timezone.utc)
+    for lead in leads:
+        lead["score_breakdown"] = score_breakdown(lead)   # tooltip "왜 N점?" ngay trong bảng
+        stage_since = since.get(lead["id"]) or lead.get("created_at")
+        lead["stage_since"] = stage_since
+        lead["days_in_stage"] = (today - datetime.fromisoformat(stage_since)).days if stage_since else None
+    return leads
 
 
 def get_lead(lead_id: int) -> dict | None:
@@ -581,6 +626,7 @@ def create_lead(payload: dict) -> dict:
     lead = normalize_lead(payload)
     with closing(_open()) as connection, connection:
         lead_id = _write(connection, lead, None)
+        _record_status(connection, lead_id, None, lead["status"])
         row = connection.execute("SELECT * FROM leads WHERE id = ?", (lead_id,)).fetchone()
     return _row_to_lead(row)
 
@@ -593,6 +639,8 @@ def update_lead(lead_id: int, payload: dict) -> dict | None:
         existing = _row_to_lead(row)
         lead = normalize_lead(payload, existing)
         _write(connection, lead, lead_id)
+        if lead["status"] != existing["status"]:
+            _record_status(connection, lead_id, existing["status"], lead["status"])
         row = connection.execute("SELECT * FROM leads WHERE id = ?", (lead_id,)).fetchone()
     return _row_to_lead(row)
 
@@ -620,6 +668,93 @@ def find_lead_for_company(company_id: int | None, domain: str | None) -> dict | 
                 "SELECT * FROM leads WHERE domain = ? ORDER BY id LIMIT 1", (domain,)
             ).fetchone()
     return _row_to_lead(row) if row else None
+
+
+# -- Chi so quy trinh (funnel) -------------------------------------------------
+
+
+def pipeline_stats() -> dict:
+    """Ty le chuyen doi tung buoc, so ngay trung binh o moi buoc, thoi gian toi 수주,
+    va buoc bi 실패 nhieu nhat. Tat ca tu lead_status_history."""
+    with closing(_open()) as connection, connection:
+        rows = connection.execute(
+            "SELECT lead_id, from_status, to_status, at FROM lead_status_history ORDER BY lead_id, at, id"
+        ).fetchall()
+        lead_rows = connection.execute("SELECT id, status, created_at FROM leads").fetchall()
+
+    leads = {row["id"]: dict(row) for row in lead_rows}
+    reached: dict[str, set[int]] = {stage: set() for stage in FUNNEL_STAGES}
+    lost_from: dict[str, int] = {}
+    hold_from: dict[str, int] = {}
+    stage_days: dict[str, list[float]] = {stage: [] for stage in FUNNEL_STAGES}
+    won_days: list[float] = []
+
+    by_lead: dict[int, list] = {}
+    for row in rows:
+        by_lead.setdefault(row["lead_id"], []).append(row)
+
+    now = datetime.now(timezone.utc)
+    for lead_id, history in by_lead.items():
+        if lead_id not in leads:
+            continue
+        # Buoc da di qua: moi trang thai tung dat toi, va moi buoc truoc no trong phieu
+        # (lead nhap thang o "제안" van da qua 신규/접촉/미팅 ve mat logic phieu).
+        for row in history:
+            target = row["to_status"]
+            if target in FUNNEL_STAGES:
+                for stage in FUNNEL_STAGES[: FUNNEL_STAGES.index(target) + 1]:
+                    reached[stage].add(lead_id)
+            elif target == "lost":
+                lost_from[row["from_status"] or "new"] = lost_from.get(row["from_status"] or "new", 0) + 1
+            elif target == "hold":
+                hold_from[row["from_status"] or "new"] = hold_from.get(row["from_status"] or "new", 0) + 1
+        # So ngay o tung buoc: tu luc vao buoc den luc ra (hoac den bay gio neu dang o do).
+        for index, row in enumerate(history):
+            start = datetime.fromisoformat(row["at"])
+            end = datetime.fromisoformat(history[index + 1]["at"]) if index + 1 < len(history) else now
+            if row["to_status"] in stage_days and row["to_status"] != "won":
+                stage_days[row["to_status"]].append((end - start).total_seconds() / 86400)
+            if row["to_status"] == "won":
+                created = datetime.fromisoformat(leads[lead_id]["created_at"])
+                won_days.append((start - created).total_seconds() / 86400)
+
+    stages = []
+    for index, stage in enumerate(FUNNEL_STAGES):
+        count = len(reached[stage])
+        next_count = len(reached[FUNNEL_STAGES[index + 1]]) if index + 1 < len(FUNNEL_STAGES) else None
+        days = stage_days[stage]
+        stages.append({
+            "stage": stage,
+            "reached": count,
+            "conversion": round(next_count / count * 100) if count and next_count is not None else None,
+            "avg_days": round(sum(days) / len(days), 1) if days else None,
+            "lost": lost_from.get(stage, 0),
+            "hold": hold_from.get(stage, 0),
+            "now": sum(1 for lead in leads.values() if lead["status"] == stage),
+        })
+    return {
+        "stages": stages,
+        "won": len(reached["won"]),
+        "velocity_days": round(sum(won_days) / len(won_days), 1) if won_days else None,
+        "total": len(leads),
+    }
+
+
+def find_duplicates(company_name: str | None, email: str | None, website: str | None) -> list[dict]:
+    """Lead da co trung domain / email / ten cong ty — canh bao truoc khi them tay."""
+    domain = _domain_from_website(_clean(website)) if website else None
+    email = (_clean(email) or "").lower() or None
+    name = (_clean(company_name) or "").lower() or None
+    matches = []
+    for lead in list_leads():
+        same_domain = domain and lead.get("domain") == domain
+        same_email = email and (lead.get("email") or "").lower() == email
+        same_name = name and (lead.get("company_name") or "").lower() == name
+        if same_domain or same_email or same_name:
+            matches.append({"id": lead["id"], "company_name": lead["company_name"], "status": lead["status"],
+                            "contact_name": lead.get("contact_name"), "email": lead.get("email"),
+                            "reason": "domain" if same_domain else "email" if same_email else "name"})
+    return matches
 
 
 # -- Nhat ky hoat dong ----------------------------------------------------------
@@ -827,7 +962,8 @@ def import_leads(filename: str, content_base64: str, commit: bool) -> dict:
     if commit and valid:
         with closing(_open()) as connection, connection:
             for lead in valid:
-                _write(connection, lead, None)
+                new_id = _write(connection, lead, None)
+                _record_status(connection, new_id, None, lead["status"])
                 inserted += 1
 
     return {

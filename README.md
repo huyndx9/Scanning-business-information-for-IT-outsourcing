@@ -97,6 +97,10 @@ lĩnh vực, website, IT Hiring kèm số lượng, ngày cập nhật. Bấm v�
 mở lại toàn bộ kết quả mà không phải quét lại; nút ↻ **quét lại** ngay công ty đó; nút
 thùng rác xoá sau khi xác nhận.
 
+Tích chọn nhiều công ty (ô tích đầu dòng, hoặc chọn tất cả theo danh sách đang lọc) → thanh
+dưới đáy **리드로 추가** đẩy cả nhóm sang CRM một lần (công ty đã có lead thì không tạo trùng,
+kết quả báo "N thêm · M đã có") hoặc **삭제** hàng loạt.
+
 Mỗi lần lưu ghi thêm một dòng lịch sử. Quét lại mà số tin tuyển IT tăng thì cột IT
 Hiring hiện **▲ +N** (giảm thì ▼); nút **▲ IT 채용 증가** lọc riêng các công ty đang
 tăng — công ty vừa tăng từ 2 lên 8 tin tuyển IT là công ty sắp cần người, đây là tín
@@ -142,6 +146,17 @@ Pipeline theo chu kỳ B2B Hàn Quốc: 신규 → 접촉 → 미팅·니즈 파
 (giá, tiến độ, đối thủ, tự phát triển, huỷ ngân sách, lo ngại ngôn ngữ) để sau này
 biết mình thua ở đâu.
 
+### 12b. Rớt ở bước nào, mất bao lâu — phễu chuyển đổi
+
+![Phễu chuyển đổi](docs/screenshots/20-crm-funnel.png)
+
+Mỗi lần đổi trạng thái được ghi vào lịch sử (`lead_status_history`), nên app tính được
+**tỉ lệ chuyển đổi từng bước** (신규 → 접촉 → 미팅 → 제안 → 협상 → 수주), số lead rớt sang
+실패/보류 *từ* bước nào, **số ngày trung bình** ở mỗi bước, và **sales velocity** — từ tạo
+lead đến 수주 trung bình bao nhiêu ngày (hiện ngay dưới ô 수주율). Trong bảng, dưới trạng
+thái có "N일째" — ở một bước quá 14 ngày thì đổi màu cam. Thêm lead tay mà đã có lead
+cùng công ty / email / domain thì app hỏi lại trước khi tạo bản trùng.
+
 ### 13. Hồ sơ lead với các trường đặc thù Hàn Quốc + điểm có giải thích
 
 ![Hồ sơ lead](docs/screenshots/13-crm-lead.png)
@@ -170,9 +185,16 @@ không cần mở app.
 
 ![Kanban](docs/screenshots/14-crm-kanban.png)
 
-Cùng dữ liệu ở dạng cột theo trạng thái. Kéo thẻ sang cột khác là đổi trạng thái và lưu
-ngay; thẻ quá hạn có nhãn đỏ. Ở bảng có thể chọn nhiều lead để đổi trạng thái hoặc xoá
-hàng loạt.
+Cùng dữ liệu ở dạng cột theo trạng thái. Kéo thẻ (tay cầm ⋮⋮) sang cột khác là đổi
+trạng thái và lưu ngay. Thẻ có người phụ trách, hành động tiếp + ngày, tiền, điểm (tooltip
+"vì sao"); chân mỗi cột tổng `N건 · ₩X억` — câu sếp hay hỏi "đang kẹt bao nhiêu ở bước
+họp?". Cột trống thu hẹp; **실패 · 보류** xếp dọc ở cuối, bấm để mở, kéo thẳng vào được.
+
+Ở bảng: bộ lọc là một thanh dính (tìm kiếm · nhanh · trạng thái · sales), cột **기술스택 ẩn
+mặc định** (hiện ở tooltip tên công ty; nút **열** chọn cột, nhớ trong trình duyệt) nên vừa
+laptop 13", rê chuột vào dòng có nút **📞 gọi · ✉️ mail nháp · 💬 copy KakaoTalk · 📝 ghi
+hoạt động**; badge 스캐너 mở đúng kết quả quét; ô KPI bấm được để lọc; chọn nhiều lead
+để đổi trạng thái hoặc xoá hàng loạt.
 
 ### 15. Nhập từ Excel Hàn, xuất Excel / JSON
 
@@ -443,6 +465,8 @@ CRM:
 | POST | `/api/leads/delete` | Xoá nhiều: body `{"ids": [...]}` |
 | POST | `/api/leads/from-company/{company_id}` | Tạo lead điền sẵn từ công ty đã quét; đã có thì trả lead cũ |
 | POST | `/api/leads/import` | Body `{"filename", "content_base64", "commit"}`; `commit=false` chỉ xem trước |
+| GET | `/api/leads/stats` | Phễu: lead tới từng bước, tỉ lệ chuyển đổi, ngày trung bình, rớt từ bước nào, sales velocity |
+| GET | `/api/leads/duplicates?company_name=&email=&website=` | Lead đã có trùng tên / email / domain |
 | GET | `/api/leads/sample.csv` | CSV mẫu đúng cột import hiểu |
 | GET | `/api/leads/calendar.ics` | Lịch iCalendar: một sự kiện cả ngày cho mỗi lead đang mở có "다음 액션 날짜" |
 | POST | `/api/leads/{id}/activities` | Ghi hoạt động `{"activity": {"type", "at", "note"}}`, cập nhật liên hệ gần nhất |

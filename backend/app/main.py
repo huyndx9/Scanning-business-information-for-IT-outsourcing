@@ -237,6 +237,17 @@ def lead_create(payload: LeadPayload) -> JSONResponse:
         return _lead_error(exc)
 
 
+@app.get("/api/leads/stats")
+def lead_stats() -> JSONResponse:
+    """Funnel: ty le chuyen doi tung buoc, so ngay o buoc, thoi gian toi 수주."""
+    return JSONResponse(content=crm.pipeline_stats())
+
+
+@app.get("/api/leads/duplicates")
+def lead_duplicates(company_name: str = "", email: str = "", website: str = "") -> JSONResponse:
+    return JSONResponse(content={"leads": crm.find_duplicates(company_name, email, website)})
+
+
 @app.get("/api/leads/sample.csv")
 def lead_sample_csv() -> PlainTextResponse:
     """CSV mau dung cac cot ma 'Nhap tu file' hieu."""

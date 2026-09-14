@@ -40,16 +40,7 @@
 
   const label = (group, code) => (code ? t(`${LABEL_GROUP[group] || group}.${code}`) : "");
 
-  function fmtKRW(amount) {
-    const value = Number(amount);
-    if (!Number.isFinite(value) || value <= 0) return "₩ 0";
-    if (value >= 100000000) {
-      const eok = value / 100000000;
-      return `₩ ${eok % 1 === 0 ? eok : eok.toFixed(1)}${t("crm.unit.eok")}`;
-    }
-    if (value >= 10000) return `₩ ${Math.round(value / 10000).toLocaleString()}${t("crm.unit.man")}`;
-    return `₩ ${value.toLocaleString()}`;
-  }
+  const fmtKRW = (amount) => formatKRW(amount) || (i18n.getLang() === "vi" ? "0 ₩" : "₩ 0");
 
   function pill(text, tone = "slate") {
     return `<span class="crm-pill crm-pill-${tone}">${esc(text)}</span>`;

@@ -42,6 +42,10 @@ const ICONS = {
   refresh: '<path d="M3 12a9 9 0 0 1 9-9 9.75 9.75 0 0 1 6.74 2.74L21 8"/><path d="M21 3v5h-5"/><path d="M21 12a9 9 0 0 1-9 9 9.75 9.75 0 0 1-6.74-2.74L3 16"/><path d="M8 16H3v5"/>',
   eye: '<path d="M2.062 12.348a1 1 0 0 1 0-.696 10.75 10.75 0 0 1 19.876 0 1 1 0 0 1 0 .696 10.75 10.75 0 0 1-19.876 0"/><circle cx="12" cy="12" r="3"/>',
   handshake: '<path d="m11 17 2 2a1 1 0 1 0 3-3"/><path d="m14 14 2.5 2.5a1 1 0 1 0 3-3l-3.88-3.88a3 3 0 0 0-4.24 0l-.88.88a1 1 0 1 1-3-3l2.81-2.81a5.79 5.79 0 0 1 7.06-.54l.34.23a1 1 0 0 0 1.33-.12L21 6"/><path d="m21 3 1 11h-2"/><path d="M3 3 2 14l6.5 6.5a1 1 0 1 0 3-3"/><path d="M3 4h8"/>',
+  columns: '<rect width="18" height="18" x="3" y="3" rx="2"/><path d="M9 3v18"/><path d="M15 3v18"/>',
+  grip: '<circle cx="9" cy="5" r="1"/><circle cx="9" cy="12" r="1"/><circle cx="9" cy="19" r="1"/><circle cx="15" cy="5" r="1"/><circle cx="15" cy="12" r="1"/><circle cx="15" cy="19" r="1"/>',
+  chat: '<path d="M7.9 20A9 9 0 1 0 4 16.1L2 22Z"/>',
+  note: '<path d="M12 20h9"/><path d="M16.376 3.622a1 1 0 0 1 3.002 3.002L7.368 18.635a2 2 0 0 1-.855.506l-2.872.838a.5.5 0 0 1-.62-.62l.838-2.872a2 2 0 0 1 .506-.854z"/>',
   userplus: '<path d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><line x1="19" x2="19" y1="8" y2="14"/><line x1="22" x2="16" y1="11" y2="11"/>',
 };
 
@@ -166,6 +170,27 @@ function askConfirm(message, okLabel) {
     document.body.appendChild(overlay);
     overlay.querySelector(".confirm-ok").focus();
   });
+}
+
+/* Tiền KRW theo cách đọc của từng ngôn ngữ:
+   ko: ₩ 2.5억 / ₩ 5,000만   ·   vi: 250 triệu ₩ / 1,2 tỷ ₩.
+   Tooltip nơi gọi vẫn cho số nguyên đầy đủ. */
+function formatKRW(amount) {
+  if (amount === null || amount === undefined || amount === "") return "";
+  const value = Number(amount);
+  if (!Number.isFinite(value) || value <= 0) return "";
+  if (i18n.getLang() === "vi") {
+    const trim = (n) => n.toLocaleString("vi-VN", { maximumFractionDigits: 1 });
+    if (value >= 1e9) return `${trim(value / 1e9)} ${t("crm.unit.billion")} ₩`;
+    if (value >= 1e6) return `${trim(value / 1e6)} ${t("crm.unit.million")} ₩`;
+    return `${value.toLocaleString("vi-VN")} ₩`;
+  }
+  if (value >= 100000000) {
+    const eok = value / 100000000;
+    return `₩ ${eok % 1 === 0 ? eok : eok.toFixed(1)}${t("crm.unit.eok")}`;
+  }
+  if (value >= 10000) return `₩ ${Math.round(value / 10000).toLocaleString()}${t("crm.unit.man")}`;
+  return `₩ ${value.toLocaleString()}`;
 }
 
 function download(blob, filename) {
@@ -847,6 +872,7 @@ if (isSavedPage) {
   const savedFilter = document.getElementById("saved-filter");
 
   let savedCompanies = [];   // bản đã tải về, dùng để lọc tại chỗ
+  let selectedSaved = new Set();   // id đang tích, để đẩy sang CRM / xoá hàng loạt
 
   function signalPill(level, jobs) {
     const tone = { High: "high", Medium: "medium", Low: "low", None: "none" }[level] || "none";
@@ -913,7 +939,8 @@ if (isSavedPage) {
     }
 
     savedRows.innerHTML = companies.map((company) => `
-      <tr data-id="${company.id}">
+      <tr data-id="${company.id}" class="${selectedSaved.has(company.id) ? "crm-row-selected" : ""}">
+        <td class="saved-td-check"><input type="checkbox" data-select="${company.id}" ${selectedSaved.has(company.id) ? "checked" : ""}></td>
         <td class="saved-name">${cell(company.name)}${company.biz_number ? `<div class="saved-sub">${esc(company.biz_number)}</div>` : ""}</td>
         <td>${cell(company.address, true)}</td>
         <td>${cell(company.phone)}</td>
@@ -938,13 +965,26 @@ if (isSavedPage) {
       </tr>`).join("");
   }
 
+  /* Thanh hàng loạt + ô "chọn tất cả" (theo danh sách đang hiển thị). */
+  function renderSavedBulk() {
+    const bar = document.getElementById("saved-bulk");
+    if (!bar) return;
+    bar.classList.toggle("hidden", selectedSaved.size === 0);
+    document.getElementById("saved-bulk-count").textContent = t("saved.bulk.selected", { count: selectedSaved.size });
+    const visible = visibleCompanies();
+    const all = document.getElementById("saved-check-all");
+    if (all) all.checked = visible.length > 0 && visible.every((company) => selectedSaved.has(company.id));
+  }
+
   async function loadSaved() {
     try {
       const response = await fetch("/api/companies");
       if (!response.ok) throw new Error(String(response.status));
       const payload = await response.json();
       savedCompanies = payload.companies || [];
+      selectedSaved = new Set([...selectedSaved].filter((id) => savedCompanies.some((company) => company.id === id)));
       renderSaved();
+      renderSavedBulk();
     } catch (_) {
       savedCount.textContent = t("saved.loadFailed");
     }
@@ -961,12 +1001,76 @@ if (isSavedPage) {
     }
   }
 
+  savedRows.addEventListener("change", (event) => {
+    const check = event.target.closest("input[data-select]");
+    if (!check) return;
+    const id = Number(check.dataset.select);
+    if (check.checked) selectedSaved.add(id); else selectedSaved.delete(id);
+    check.closest("tr").classList.toggle("crm-row-selected", check.checked);
+    renderSavedBulk();
+  });
+
+  const savedCheckAll = document.getElementById("saved-check-all");
+  if (savedCheckAll) {
+    savedCheckAll.addEventListener("change", () => {
+      visibleCompanies().forEach((company) => {
+        if (savedCheckAll.checked) selectedSaved.add(company.id); else selectedSaved.delete(company.id);
+      });
+      renderSaved();
+      renderSavedBulk();
+    });
+  }
+
+  document.getElementById("saved-bulk-clear").addEventListener("click", () => {
+    selectedSaved.clear();
+    renderSaved();
+    renderSavedBulk();
+  });
+
+  /* Đẩy nhiều công ty sang CRM: API tự chống trùng (đã có lead thì trả lead cũ). */
+  document.getElementById("saved-bulk-lead").addEventListener("click", async () => {
+    const ids = [...selectedSaved];
+    if (!ids.length) return;
+    const button = document.getElementById("saved-bulk-lead");
+    button.disabled = true;
+    let created = 0, existing = 0, failed = 0, noContact = 0;
+    for (const id of ids) {
+      const company = savedCompanies.find((item) => item.id === id);
+      if (company && !company.email && !company.phone) noContact += 1;
+      try {
+        const response = await fetch(`/api/leads/from-company/${id}`, { method: "POST" });
+        if (!response.ok) throw new Error(String(response.status));
+        const payload = await response.json();
+        if (payload.created) created += 1; else existing += 1;
+      } catch (_) {
+        failed += 1;
+      }
+    }
+    button.disabled = false;
+    selectedSaved.clear();
+    renderSaved();
+    renderSavedBulk();
+    refreshNavCrmBadge();
+    const summary = t("saved.bulk.leadDone", { created, existing, failed, noContact });
+    if (await askConfirm(summary, t("saved.bulk.openCrm"))) window.location.href = "/crm";
+  });
+
+  document.getElementById("saved-bulk-delete").addEventListener("click", async () => {
+    const ids = [...selectedSaved];
+    if (!ids.length || !(await askConfirm(t("saved.bulk.confirmDelete", { count: ids.length }), t("saved.action.delete")))) return;
+    for (const id of ids) {
+      try { await fetch(`/api/companies/${id}`, { method: "DELETE" }); } catch (_) { /* dòng lỗi giữ lại, tải lại sẽ thấy */ }
+    }
+    selectedSaved.clear();
+    await loadSaved();
+  });
+
   savedRows.addEventListener("click", (event) => {
     const button = event.target.closest("button[data-action]");
     if (!button) {
-      // Bấm vào dòng (không phải link/nút) cũng mở kết quả đầy đủ.
+      // Bấm vào dòng (không phải link/nút/ô tích) cũng mở kết quả đầy đủ.
       const row = event.target.closest("tr[data-id]");
-      if (row && !event.target.closest("a")) window.location.href = `/?company=${encodeURIComponent(row.dataset.id)}`;
+      if (row && !event.target.closest("a, input, .saved-td-check")) window.location.href = `/?company=${encodeURIComponent(row.dataset.id)}`;
       return;
     }
     const id = button.dataset.id;
@@ -1056,7 +1160,7 @@ if (isSavedPage) {
   });
 
   document.getElementById("saved-refresh").addEventListener("click", loadSaved);
-  savedFilter.addEventListener("input", renderSaved);
+  savedFilter.addEventListener("input", () => { renderSaved(); renderSavedBulk(); });
   const trendToggle = document.getElementById("saved-trend-toggle");
   if (trendToggle) {
     trendToggle.addEventListener("click", () => {

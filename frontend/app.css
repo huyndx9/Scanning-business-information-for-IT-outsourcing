@@ -77,11 +77,13 @@
   text-overflow: ellipsis;
   white-space: nowrap;
 }
-.saved-table td:nth-child(2) .saved-truncate { max-width: 110px; }   /* dia chi */
-.saved-table td:nth-child(4) .saved-truncate { max-width: 112px; }   /* email */
-.saved-table td:nth-child(5) .saved-truncate { max-width: 95px; }   /* linh vuc */
-.saved-table td:nth-child(6) .saved-truncate { max-width: 95px; }   /* website */
-.saved-table td:first-child { max-width: 150px; overflow: hidden; text-overflow: ellipsis; }
+.saved-table td:nth-child(3) .saved-truncate { max-width: 100px; }   /* dia chi */
+.saved-table td:nth-child(5) .saved-truncate { max-width: 108px; }   /* email */
+.saved-table td:nth-child(6) .saved-truncate { max-width: 88px; }    /* linh vuc */
+.saved-table td:nth-child(7) .saved-truncate { max-width: 88px; }    /* website */
+.saved-table td.saved-name { max-width: 140px; overflow: hidden; text-overflow: ellipsis; }
+.saved-th-check, .saved-td-check { width: 30px; text-align: center; padding-left: 4px !important; padding-right: 4px !important; }
+.saved-table input[type="checkbox"] { width: 15px; height: 15px; cursor: pointer; accent-color: #2563eb; vertical-align: middle; }
 .saved-table th, .saved-table td { padding-left: 7px; padding-right: 7px; }
 .saved-table tbody tr { cursor: pointer; }
 .saved-date { color: #64748b; font-size: 12px; }
@@ -501,6 +503,38 @@
 
 .crm-count { font-size: 12px; color: #64748b; margin: 6px 2px 10px; }
 
+/* Thanh loc dinh: mot khoi, hai hang */
+.crm-toolbar-sticky { position: sticky; top: 64px; z-index: 20; flex-direction: column; align-items: stretch; gap: 8px; padding: 10px 0 8px; margin: 0 0 8px; background: rgba(252,252,253,.92); backdrop-filter: blur(8px); border-bottom: 1px solid #eef2f7; }
+.crm-toolbar-row { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; }
+.crm-search-wrap { flex: 1 1 260px; min-width: 200px; }
+.crm-search-wrap .crm-search { width: 100%; }
+.crm-toolbar-right { display: flex; align-items: center; gap: 8px; margin-left: auto; }
+.crm-toolbar-sticky .crm-count { margin: 0; white-space: nowrap; }
+.crm-columns-menu { width: 200px; }
+.crm-menu-check { cursor: pointer; }
+.crm-menu-check input { accent-color: #2563eb; }
+
+/* An / hien cot */
+.crm-col-hidden { display: none; }
+
+/* Hanh dong nhanh khi re chuot vao dong */
+.crm-th-actions, .crm-td-actions { width: 118px; }
+.crm-quick { display: flex; gap: 4px; justify-content: flex-end; opacity: 0; transition: opacity .12s; }
+.crm-table tbody tr:hover .crm-quick { opacity: 1; }
+.crm-quick-btn {
+  display: inline-flex; align-items: center; justify-content: center; width: 26px; height: 26px; border-radius: 999px;
+  border: 1px solid #e2e8f0; background: #fff; color: #475569; cursor: pointer; text-decoration: none;
+}
+.crm-quick-btn:hover { background: #eff6ff; border-color: #bfdbfe; color: #1d4ed8; }
+
+/* Badge 스캐너 bam duoc */
+.crm-pill-link { text-decoration: none; gap: 3px; }
+.crm-pill-link:hover { background: #dbeafe; }
+
+/* O KPI bam duoc */
+.crm-kpi-click { cursor: pointer; transition: border-color .15s, box-shadow .15s; }
+.crm-kpi-click:hover { border-color: #93c5fd; box-shadow: 0 4px 12px -6px rgba(37,99,235,.35); }
+
 /* --- Bang ------------------------------------------------------------------- */
 
 .crm-card { padding: 6px 0 0; }
@@ -559,21 +593,24 @@
 .crm-ring-rose { border-color: #ef4444; color: #be123c; }
 .crm-hot { font-size: 9.5px; font-weight: 800; background: #10b981; color: #fff; padding: 2px 5px; border-radius: 4px; }
 
+/* Trang thai: pill nhat co cham mau + chevron; van la <select> de doi nhanh nhat. */
+.crm-status-wrap { position: relative; display: inline-flex; align-items: center; height: 28px; padding: 0 0 0 20px; border-radius: 999px; border: 1px solid; }
+.crm-status-wrap::before { content: ""; position: absolute; left: 9px; top: 50%; width: 7px; height: 7px; margin-top: -3.5px; border-radius: 999px; background: currentColor; }
 .crm-status {
-  height: 28px; padding: 0 26px 0 11px; border-radius: 999px; border: none; color: #fff;
+  height: 26px; padding: 0 24px 0 4px; border: none; background: transparent; color: inherit;
   font-size: 11.5px; font-weight: 700; cursor: pointer; appearance: none; -webkit-appearance: none; outline: none;
-  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='12' viewBox='0 0 24 24' fill='none' stroke='white' stroke-width='2.5' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='m6 9 6 6 6-6'/%3E%3C/svg%3E");
-  background-repeat: no-repeat; background-position: right 9px center;
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='12' viewBox='0 0 24 24' fill='none' stroke='%2364748b' stroke-width='2.5' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='m6 9 6 6 6-6'/%3E%3C/svg%3E");
+  background-repeat: no-repeat; background-position: right 7px center;
 }
 .crm-status option { color: #0f172a; background: #fff; font-weight: 500; }
-.crm-status-slate { background-color: #64748b; }
-.crm-status-blue { background-color: #2563eb; }
-.crm-status-indigo { background-color: #4f46e5; }
-.crm-status-amber { background-color: #d97706; }
-.crm-status-violet { background-color: #7c3aed; }
-.crm-status-emerald { background-color: #059669; }
-.crm-status-rose { background-color: #e11d48; }
-.crm-status-stone { background-color: #78716c; }
+.crm-status-slate { background: #f1f5f9; border-color: #e2e8f0; color: #475569; }
+.crm-status-blue { background: #eff6ff; border-color: #bfdbfe; color: #1d4ed8; }
+.crm-status-indigo { background: #eef2ff; border-color: #c7d2fe; color: #4338ca; }
+.crm-status-amber { background: #fffbeb; border-color: #fde68a; color: #b45309; }
+.crm-status-violet { background: #f5f3ff; border-color: #ddd6fe; color: #6d28d9; }
+.crm-status-emerald { background: #ecfdf5; border-color: #a7f3d0; color: #047857; }
+.crm-status-rose { background: #fff1f2; border-color: #fecdd3; color: #be123c; }
+.crm-status-stone { background: #fafaf9; border-color: #e7e5e4; color: #57534e; }
 
 .crm-next { color: #475569; font-size: 12px; white-space: nowrap; }
 .crm-next-overdue { color: #dc2626; font-weight: 700; font-size: 12px; white-space: nowrap; }
@@ -585,11 +622,29 @@
 
 /* --- Kanban --------------------------------------------------------------- */
 
-.crm-kanban { display: grid; grid-template-columns: repeat(6, minmax(0, 1fr)); gap: 10px; }
+.crm-kanban { display: flex; gap: 10px; align-items: stretch; overflow-x: auto; padding-bottom: 4px; }
 .crm-kanban.hidden { display: none; }
-@media (max-width: 1000px) { .crm-kanban { grid-template-columns: repeat(3, minmax(0, 1fr)); } }
-@media (max-width: 600px) { .crm-kanban { grid-template-columns: repeat(2, minmax(0, 1fr)); } }
-.crm-kcol { background: #f8fafc; border: 1px solid #e2e8f0; border-radius: 14px; padding: 10px; min-height: 380px; transition: background-color .15s, border-color .15s; }
+.crm-kcol { flex: 1 1 0; min-width: 140px; display: flex; flex-direction: column; background: #f8fafc; border: 1px solid #e2e8f0; border-radius: 14px; padding: 10px; min-height: 380px; transition: background-color .15s, border-color .15s, flex-basis .15s; }
+/* Cot trong: thu hep de khong ton dien tich */
+.crm-kcol-empty { flex: 0 0 110px; min-width: 110px; min-height: 120px; background: #fbfcfd; border-style: dashed; }
+/* 실패 / 보류: cot mong o cuoi, bam de mo, van keo tha vao duoc */
+.crm-kcol-closed .crm-kcol-head { cursor: pointer; }
+.crm-kcol-stack { flex: 0 0 150px; min-width: 150px; display: flex; flex-direction: column; gap: 10px; }
+.crm-kcol-stack .crm-kcol { flex: 0 0 auto; min-width: 0; min-height: 0; }
+.crm-kcol-stack .crm-kcol:not(.crm-kcol-collapsed) { flex: 1 1 auto; }
+.crm-kcol-collapsed { min-height: 0; background: #fbfcfd; }
+.crm-kcol-collapsed .crm-kcol-head { margin-bottom: 0; }
+.crm-kcol-foot { margin-top: auto; padding-top: 10px; font-size: 11.5px; font-weight: 600; color: #64748b; border-top: 1px dashed #e2e8f0; }
+.crm-kcard-top { display: flex; align-items: center; gap: 6px; }
+.crm-kcard-top .crm-clip { flex: 1; min-width: 0; }
+.crm-grip { color: #cbd5e1; display: flex; flex-shrink: 0; }
+.crm-kcard:hover .crm-grip { color: #94a3b8; }
+.crm-assignee { flex-shrink: 0; width: 20px; height: 20px; border-radius: 999px; background: #0f172a; color: #fff; font-size: 10px; font-weight: 700; display: inline-flex; align-items: center; justify-content: center; }
+.crm-kcard-next { margin-top: 6px; font-size: 11px; color: #475569; }
+.crm-kcard-next.crm-next-overdue { white-space: normal; display: block; }
+.crm-kcard-next.crm-next-overdue svg { display: inline; vertical-align: -2px; }
+.crm-kcard { cursor: grab; }
+.crm-kcard:active { cursor: grabbing; }
 .crm-kcol-over { background: #eff6ff; border-color: #93c5fd; }
 .crm-kcol-head { display: flex; align-items: center; gap: 6px; font-size: 12px; font-weight: 700; margin-bottom: 10px; }
 .crm-kcol-head .crm-chip-count { margin-left: auto; background: #fff; }
@@ -602,7 +657,7 @@
 .crm-kcard .crm-clip { max-width: 100%; }
 .crm-dragging { opacity: .4; }
 .crm-kcard-foot { display: flex; align-items: center; justify-content: space-between; margin-top: 8px; font-size: 12px; }
-.crm-kanban-note { grid-column: 1 / -1; font-size: 11.5px; color: #94a3b8; text-align: center; padding: 6px; }
+.crm-kcol-over { background: #eff6ff !important; border-color: #93c5fd !important; box-shadow: inset 0 0 0 2px #bfdbfe; }
 
 /* --- Bulk bar ----------------------------------------------------------------- */
 
@@ -776,6 +831,34 @@ label.batch-toggle input { display: none; }
 .confirm-actions { display: flex; justify-content: flex-end; gap: 8px; margin-top: 16px; }
 .confirm-ok { background: #e11d48; border-color: #e11d48; color: #fff; }
 .confirm-ok:hover { background: #be123c; }
+
+/* --- Pheu chuyen doi ------------------------------------------------------------ */
+
+.crm-funnel { margin: -6px 0 16px; border: 1px solid #e2e8f0; border-radius: 16px; background: #fff; }
+.crm-funnel-summary { display: flex; align-items: center; gap: 8px; padding: 10px 14px; font-size: 13px; font-weight: 700; cursor: pointer; list-style: none; }
+.crm-funnel-summary::-webkit-details-marker { display: none; }
+.crm-funnel-summary > span:first-child { display: flex; color: #94a3b8; transition: transform .15s; }
+.crm-funnel[open] .crm-funnel-summary > span:first-child { transform: rotate(180deg); }
+.crm-funnel-summary .crm-meta { margin-left: auto; font-weight: 400; }
+.crm-funnel-body { padding: 4px 14px 12px; }
+.crm-funnel-grid { display: flex; flex-direction: column; gap: 6px; }
+.crm-funnel-row { display: grid; grid-template-columns: 150px 1fr 260px; align-items: center; gap: 12px; }
+.crm-funnel-label { display: flex; align-items: center; gap: 6px; font-size: 12.5px; font-weight: 600; }
+.crm-funnel-bar-wrap { position: relative; height: 22px; background: #f1f5f9; border-radius: 6px; overflow: hidden; }
+.crm-funnel-bar { height: 100%; border-radius: 6px; opacity: .85; transition: width .3s; }
+.crm-funnel-bar-slate { background: #94a3b8; } .crm-funnel-bar-blue { background: #60a5fa; } .crm-funnel-bar-indigo { background: #818cf8; }
+.crm-funnel-bar-amber { background: #fbbf24; } .crm-funnel-bar-violet { background: #a78bfa; } .crm-funnel-bar-emerald { background: #34d399; }
+.crm-funnel-count { position: absolute; left: 8px; top: 0; line-height: 22px; font-size: 11.5px; font-weight: 700; color: #0f172a; }
+.crm-funnel-meta { display: flex; align-items: center; gap: 10px; font-size: 12px; white-space: nowrap; }
+.crm-funnel-conv { font-weight: 700; color: #1d4ed8; min-width: 52px; }
+.crm-funnel-won { color: #047857; }
+.crm-funnel-lost { color: #be123c; font-size: 11.5px; }
+.crm-funnel-foot { margin-top: 10px; font-size: 12px; color: #475569; font-weight: 600; }
+@media (max-width: 760px) { .crm-funnel-row { grid-template-columns: 110px 1fr; } .crm-funnel-meta { grid-column: 1 / -1; } }
+
+/* So ngay o buoc hien tai duoi trang thai */
+.crm-stage-days { margin-top: 3px; }
+.crm-stage-stale { color: #b45309; font-weight: 600; }
 
 /* --- Toast ------------------------------------------------------------------- */
 

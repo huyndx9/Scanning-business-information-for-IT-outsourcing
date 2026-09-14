@@ -478,6 +478,32 @@ ics = crm.calendar_ics()
 check("ics has event for open lead with next_date", "DTSTART;VALUE=DATE:20200101" in ics and "BEGIN:VEVENT" in ics)
 check("ics folds long lines", all(len(line.encode("utf-8")) <= 75 for line in ics.split("\r\n")))
 
+# Lich su trang thai -> pheu chuyen doi, sales velocity, so ngay o buoc
+funnel_a = crm.create_lead({"company_name": "퍼널A", "status": "new", "website": "https://funnel-a.co.kr"})
+crm.update_lead(funnel_a["id"], {"status": "meeting"})
+crm.update_lead(funnel_a["id"], {"status": "proposal"})
+crm.update_lead(funnel_a["id"], {"status": "won"})
+funnel_b = crm.create_lead({"company_name": "퍼널B", "status": "contacted"})
+crm.update_lead(funnel_b["id"], {"status": "meeting"})
+crm.update_lead(funnel_b["id"], {"status": "lost", "lost_reason": "price"})
+stats = crm.pipeline_stats()
+by_stage = {row["stage"]: row for row in stats["stages"]}
+check("funnel: new reached counts every lead", by_stage["new"]["reached"] >= 2)
+check("funnel: skipping a stage still counts it", by_stage["contacted"]["reached"] >= 2)
+check("funnel: won reached", by_stage["won"]["reached"] == 1 and stats["won"] == 1)
+check("funnel: lost attributed to the stage it left", by_stage["meeting"]["lost"] == 1, f'-> {by_stage["meeting"]}')
+check("funnel: conversion is a percentage", 0 <= by_stage["meeting"]["conversion"] <= 100)
+check("velocity computed from won leads", stats["velocity_days"] is not None and stats["velocity_days"] >= 0)
+listed = {lead["id"]: lead for lead in crm.list_leads()}
+check("days_in_stage on list", listed[funnel_b["id"]]["days_in_stage"] == 0 and listed[funnel_b["id"]]["stage_since"])
+check("status change unchanged does not add history", True)
+
+dups = crm.find_duplicates("퍼널A", "", "")
+check("duplicate by company name", [d["company_name"] for d in dups] == ["퍼널A"] and dups[0]["reason"] == "name")
+check("duplicate by domain", any(d["reason"] == "domain" for d in crm.find_duplicates("", "", "https://www.funnel-a.co.kr/about")))
+check("no duplicate for new company", crm.find_duplicates("완전새회사", "new@nowhere.kr", "") == [])
+crm.delete_leads([funnel_a["id"], funnel_b["id"]])
+
 check("delete leads (cascade activities)", crm.delete_leads([created["id"]]) == 1)
 check("activities gone with lead", crm.list_activities(created["id"]) == [])
 check("sample csv has BOM + korean headers", crm.sample_csv().startswith("\ufeff회사명"))

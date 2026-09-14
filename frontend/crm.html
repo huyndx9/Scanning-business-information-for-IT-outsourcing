@@ -82,27 +82,43 @@
       <!-- KPI -->
       <div class="crm-kpis" id="crm-kpis"></div>
 
-      <!-- Bộ lọc -->
-      <div class="crm-toolbar">
-        <div class="saved-search">
-          <span class="saved-search-icon" data-icon="search" data-size="14"></span>
-          <input id="crm-search" type="text" class="saved-search-input crm-search" autocomplete="off" data-i18n-placeholder="crm.search">
-        </div>
-        <div class="crm-seg" id="crm-quick">
-          <button class="crm-seg-btn crm-seg-active" data-quick="all" data-i18n="crm.filter.all"></button>
-          <button class="crm-seg-btn" data-quick="hot" data-i18n="crm.filter.hot"></button>
-          <button class="crm-seg-btn" data-quick="overdue" data-i18n="crm.filter.overdue"></button>
-          <button class="crm-seg-btn" data-quick="week" data-i18n="crm.filter.thisWeek"></button>
+      <!-- Phễu: tỉ lệ chuyển đổi từng bước (từ lịch sử đổi trạng thái) -->
+      <details class="crm-funnel" id="crm-funnel">
+        <summary class="crm-funnel-summary">
+          <span data-icon="chevron" data-size="14"></span> <span data-i18n="crm.funnel.title"></span>
+          <span class="crm-meta" id="crm-funnel-hint" data-i18n="crm.funnel.hint"></span>
+        </summary>
+        <div id="crm-funnel-body" class="crm-funnel-body"></div>
+      </details>
+
+      <!-- Bộ lọc: một thanh dính, hai hàng nhưng đọc một lần -->
+      <div class="crm-toolbar crm-toolbar-sticky">
+        <div class="crm-toolbar-row">
+          <div class="saved-search crm-search-wrap">
+            <span class="saved-search-icon" data-icon="search" data-size="14"></span>
+            <input id="crm-search" type="text" class="saved-search-input crm-search" autocomplete="off" data-i18n-placeholder="crm.search">
+          </div>
+          <div class="crm-seg" id="crm-quick">
+            <button class="crm-seg-btn crm-seg-active" data-quick="all" data-i18n="crm.filter.all"></button>
+            <button class="crm-seg-btn" data-quick="hot" data-i18n="crm.filter.hot"></button>
+            <button class="crm-seg-btn" data-quick="overdue" data-i18n="crm.filter.overdue"></button>
+            <button class="crm-seg-btn" data-quick="week" data-i18n="crm.filter.thisWeek"></button>
+          </div>
+          <select id="crm-assignee" class="crm-select crm-select-sm"></select>
+          <span class="crm-count" id="crm-count"></span>
+          <div class="crm-toolbar-right">
+            <div class="relative">
+              <button id="crm-columns-btn" class="crm-btn crm-btn-sm" title="" data-i18n-title="crm.columns.title"><span data-icon="columns" data-size="14"></span> <span data-i18n="crm.columns"></span></button>
+              <div id="crm-columns-menu" class="hidden crm-menu crm-columns-menu"></div>
+            </div>
+            <div class="crm-seg crm-seg-dark" id="crm-view">
+              <button class="crm-seg-btn crm-seg-active" data-view="table" data-i18n="crm.view.table"></button>
+              <button class="crm-seg-btn" data-view="kanban" data-i18n="crm.view.kanban"></button>
+            </div>
+          </div>
         </div>
         <div class="crm-status-filters" id="crm-status-filters"></div>
-        <select id="crm-assignee" class="crm-select crm-select-sm"></select>
-        <div class="crm-seg crm-seg-dark" id="crm-view">
-          <button class="crm-seg-btn crm-seg-active" data-view="table" data-i18n="crm.view.table"></button>
-          <button class="crm-seg-btn" data-view="kanban" data-i18n="crm.view.kanban"></button>
-        </div>
       </div>
-
-      <p class="crm-count" id="crm-count"></p>
 
       <!-- Bảng -->
       <div id="crm-table-wrap" class="rounded-[20px] border border-slate-200 bg-white shadow-sm crm-card">
@@ -113,13 +129,14 @@
                 <th class="crm-th-check"><input type="checkbox" id="crm-check-all"></th>
                 <th data-i18n="crm.col.company"></th>
                 <th data-i18n="crm.col.contact"></th>
-                <th data-i18n="crm.col.source"></th>
-                <th data-i18n="crm.col.tech"></th>
-                <th data-i18n="crm.col.budget"></th>
-                <th data-i18n="crm.col.timing"></th>
-                <th data-i18n="crm.col.score"></th>
-                <th data-i18n="crm.col.status"></th>
-                <th data-i18n="crm.col.next"></th>
+                <th data-col="source" data-i18n="crm.col.source"></th>
+                <th data-col="tech" data-i18n="crm.col.tech"></th>
+                <th data-col="budget" data-i18n="crm.col.budget"></th>
+                <th data-col="timing" data-i18n="crm.col.timing"></th>
+                <th data-col="score" data-i18n="crm.col.score"></th>
+                <th data-col="status" data-i18n="crm.col.status"></th>
+                <th data-col="next" data-i18n="crm.col.next"></th>
+                <th class="crm-th-actions"></th>
               </tr>
             </thead>
             <tbody id="crm-rows"></tbody>
